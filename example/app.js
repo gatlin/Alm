@@ -179,12 +179,12 @@ var app = App.init('the_app')
     // was the checkbox next to a task clicked?
     events.change
         .filter((evt) => evt.target.className === 'toggle')
-        .recv(function(evt) {
+        .recv((evt) =>
             actions.send({
                 type: Actions.Complete,
                 content: parseInt(evt.target.id.split('-')[2])
-            });
-        });
+            })
+        );
 
     // was a task double clicked? Start editing!
     events.mouse.dblclick
