@@ -140,28 +140,16 @@ var app = App.init('the_app')
     // Do we have a saved model? If so, use it. Otherwise create an empty one.
     // Fires when the 'enter' key is pressed
     var onEnter = events.keyboard.keydown
-<<<<<<< HEAD
-=======
-        //.filter(function(evt) { return evt.keyCode === 13; });
->>>>>>> 1a3237c1ff04916a2a21de886957c31bc0946bdd
         .filter((evt) => evt.keyCode === 13)
 
     // When enter is pressed inside the main input field, add a task
     onEnter
-<<<<<<< HEAD
-=======
-        //.filter(function(evt) { return evt.target.id === 'field'; })
->>>>>>> 1a3237c1ff04916a2a21de886957c31bc0946bdd
         .filter((evt) => evt.target.id === 'field')
         .recv((evt) =>
             actions.send({ type: Actions.Add }) );
 
     // When enter is pressed inside a task edit field, finish updating the task
     onEnter
-<<<<<<< HEAD
-=======
-        //.filter(function(evt) { return evt.target.className === 'editing'; })
->>>>>>> 1a3237c1ff04916a2a21de886957c31bc0946bdd
         .filter((evt) => evt.target.className === 'editing')
         .recv((evt) =>
             actions.send({
