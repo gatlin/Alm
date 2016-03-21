@@ -24,12 +24,17 @@ The name is a reference not only to [Elm][elm] but to the idea of *alms*,
 charity given to the poor and needy. I think Elm has really contributed some
 innovative ideas and practical code to a space which sorely needed it.
 
-2. LICENSE
+2. Status
+
+THIS IS NOT READY FOR PRIMETIME DON'T YOU EVEN THINK ABOUT USING THIS SOME
+PLACE IMPORTANT AND THEN GETTING MAD NOPE DON'T EVEN.
+
+3. LICENSE
 ---
 
 See the included `LICENSE` file.
 
-3. Questions / comments / bugs / free money
+4. Questions / comments / bugs / free money
 ---
 
 Send all inquiries to <gatlin@niltag.net>, except bugs. Bugs should be
