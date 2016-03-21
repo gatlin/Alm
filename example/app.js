@@ -125,15 +125,14 @@ var app = App.init('the_app')
             : JSON.parse(maybe_saved);
     };
 
-    runtime.utils.save_model = function(model) {
-        window.localStorage.setItem('todos',JSON.stringify(model));
-    };
+    runtime.utils.save_model = (model) =>
+        window.localStorage.setItem('todos',JSON.stringify(model)) ;
+
     return save(runtime);
 })
 
 // Now we wire our signals together
 .main(function(events, utils, vdom) {
-
 
     // When an event happens, an action is sent here.
     var actions = utils.mailbox({ type: Actions.NoOp });
@@ -141,53 +140,48 @@ var app = App.init('the_app')
     // Do we have a saved model? If so, use it. Otherwise create an empty one.
     // Fires when the 'enter' key is pressed
     var onEnter = events.keyboard.keydown
-        .filter(function(evt) { return evt.keyCode === 13; });
+        //.filter(function(evt) { return evt.keyCode === 13; });
+        .filter((evt) => evt.keyCode === 13)
 
     // When enter is pressed inside the main input field, add a task
     onEnter
-        .filter(function(evt) { return evt.target.id === 'field'; })
-        .recv(function(evt) {
-            actions.send({ type: Actions.Add });
-        });
+        //.filter(function(evt) { return evt.target.id === 'field'; })
+        .filter((evt) => evt.target.id === 'field')
+        .recv((evt) =>
+            actions.send({ type: Actions.Add }) );
 
     // When enter is pressed inside a task edit field, finish updating the task
     onEnter
-        .filter(function(evt) { return evt.target.className === 'editing'; })
-        .recv(function(evt) {
+        //.filter(function(evt) { return evt.target.className === 'editing'; })
+        .filter((evt) => evt.target.className === 'editing')
+        .recv((evt) =>
             actions.send({
                 type: Actions.UpdateTask,
                 content: {
                     uid: parseInt(evt.target.id.split('-')[2]),
                     text: evt.target.value
-                }
-            });
-        });
+                } }) );
 
     // Whenever the text box is updated, update the model 'field'
     events.input
-        .filter(function(evt) { return evt.target.id === 'field'; })
-        .recv(function(evt) {
+        .filter((evt) => evt.target.id === 'field')
+        .recv((evt) =>
             actions.send({
                 type: Actions.UpdateField,
-                content: evt.target.value
-            });
-        });
+                content: evt.target.value }) );
 
     // Was a delete button clicked?
     events.mouse.click
-        .filter(function(evt) {
-            return evt.target.className === 'delete_button'; })
-        .recv(function(evt) {
+        .filter((evt) => evt.target.className === 'delete_button')
+        .recv((evt) =>
             actions.send({
                 type: Actions.Delete,
                 content: parseInt(evt.target.id.split('-')[2])
-            });
-        });
+            }) );
 
     // was the checkbox next to a task clicked?
     events.change
-        .filter(function(evt) {
-            return evt.target.className === 'toggle'; })
+        .filter((evt) => evt.target.className === 'toggle')
         .recv(function(evt) {
             actions.send({
                 type: Actions.Complete,
@@ -197,40 +191,36 @@ var app = App.init('the_app')
 
     // was a task double clicked? Start editing!
     events.mouse.dblclick
-        .filter(function(evt) {
-            return evt.target.className === 'task_text'; })
-        .recv(function(evt) {
+        .filter((evt) => evt.target.className === 'task_text')
+        .recv((evt) =>
             actions.send({
                 type: Actions.Editing,
                 content: parseInt(evt.target.id.split('-')[2])
-            });
-        });
+            })
+        );
 
     events.keyboard.blur
-        .filter(function(evt) {
-            return evt.target.className === 'editing'; })
-        .recv(function(evt) {
+        .filter((evt) => evt.target.className === 'editing')
+        .recv((evt) =>
             actions.send({
                 type: Actions.UpdateTask,
                 content: {
                     uid: parseInt(evt.target.id.split('-')[2]),
                     text: evt.target.value
                 }
-            });
-        });
+            })
+        );
 
     // a signal broadcasting updated models
     var model = actions.signal
         .reduce(utils.initial_model(), update);
 
     // a model listener - saves the model
-    var save = model.recv(function(model) {
-        utils.save_model(model);
-    });
+    var save = model.recv((model) => utils.save_model(model));
 
     // When the model changes, update the input element with id `field`
     var field_value = utils.port.outbound('field_value');
-    model.map(function(m) { return m.field; }).connect(field_value);
+    model.map((m) => m.field).connect(field_value);
 
     var el = vdom.el; // convenience
     // a model listener - renders the model
@@ -276,7 +266,5 @@ var app = App.init('the_app')
 // and begin the application
 .start();
 
-app.ports['field_value'].listen(function(v) {
-    document.getElementById('field').value = v;
-});
+app.ports['field_value'].listen((v) => document.getElementById('field').value = v );
 
