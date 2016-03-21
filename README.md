@@ -48,6 +48,7 @@ safeguards of this library, though this then begs the question of why you would
 use it in the first place.
 
 2. Status
+---
 
 THIS IS NOT READY FOR PRIMETIME DON'T YOU EVEN THINK ABOUT USING THIS SOME
 PLACE IMPORTANT AND THEN GETTING MAD NOPE DON'T EVEN.
