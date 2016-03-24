@@ -143,6 +143,61 @@ var extract = module.extract = function(comonad) {
 var duplicate = module.duplicate = function(comonad) {
     return comonad.duplicate(); };
 
+function Evaluator(focus, values) {
+    this.focus = focus;
+    this.values = values;
+}
+
+Evaluator.prototype = {
+    map: function(f) {
+        var me = this;
+        var newValues = {};
+        for (var key in me.values) {
+            newValues[key] = f(me.values[key]);
+        }
+        return new Evaluator(this.focus, newValues);
+    },
+    // assumes exact same data in both 'values'
+    ap: function(other) {
+        var newValues = {};
+        for (var key in this.values) {
+            newValues[key] = this.values[key](other.values[key]);
+        }
+        return new Evaluator(this.focus, newValues);
+    },
+    extract: function() {
+        return this.values[this.focus];
+    },
+    duplicate: function() {
+        var me = this;
+        var newValues = {};
+        for (var key in this.values) {
+            let new_me = new Evaluator(key, me.values);
+            newValues[key] = new_me;
+        }
+        return new Evaluator(this.focus, newValues);
+    },
+    at: function(k) {
+        var me = this;
+        return me.values[k](me);
+    }
+};
+
+instance(Evaluator, Functor);
+instance(Evaluator, Comonad);
+instance(Evaluator, Evaluate);
+
+module.Evaluator = Evaluator;
+
+Array.prototype.flatten = function() {
+    return this.reduce(function(a,b) { return a.concat(b); });
+};
+
+if (!Array.of) {
+    Array.of = function() {
+        return Array.prototype.slice.call(arguments);
+    };
+}
 
 /////
 // MODULE END
