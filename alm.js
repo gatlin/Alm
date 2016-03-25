@@ -1,14 +1,14 @@
 (function(Public) {
+
+'use strict';
+
 /**
  * Alm.js
  *
  * A simple re-implementation of the Elm runtime and core libraries.
  */
 
-var guid_count = 0;
-var guid = Public.guid = function() {
-    return guid_count++;
-};
+var guid = Public.guid = guid_factory(); // from loeb.js
 
 /**
  * Signal
