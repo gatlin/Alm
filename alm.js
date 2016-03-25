@@ -195,11 +195,12 @@ function setupPorts(runtime) {
  */
 function setupVdom(runtime) {
     var vdom = {};
+
     /**
      * A Node is an HTML node, which contains a tag, attributes, and 0 or more
      * child nodes.
      */
-    vdom.el = function(tag, attrs, children) {
+    var el = vdom.el = function(tag, attrs, children) {
         return {
             tag: tag,
             attrs: attrs,
@@ -209,7 +210,7 @@ function setupVdom(runtime) {
         };
     };
 
-    vdom.makeElement = function(node) {
+    vdom.makeDOMElement = function(node) {
         if (typeof node === 'string') {
             return document.createTextNode(node);
         }
@@ -218,14 +219,14 @@ function setupVdom(runtime) {
             el.setAttribute(key, node.attrs[key]);
         }
         for (var i = 0; i < node.children.length; i++) {
-            var child = vdom.makeElement(node.children[i]);
+            var child = vdom.makeDOMElement(node.children[i]);
             el.appendChild(child);
         }
         return el;
     };
 
     vdom.render = function(node, root) {
-        var tree = vdom.makeElement(node);
+        var tree = vdom.makeDOMElement(node);
         var root = (typeof root !== 'undefined')
             ? runtime.byId(root)
             : runtime.domRoot;
