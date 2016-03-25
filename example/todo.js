@@ -133,11 +133,18 @@ var app = App.init('the_app')
     return save(runtime);
 })
 
-// Now we wire our signals together
-.main(function(events, utils, vdom) {
+/* Now we wire our signals together.
+ * Note that `main` is only given a subset of the runtime, to prevent silly
+ * mistakes from happening: events, vdom, utils, mailbox, and port
+ * manipulation.
+ */
+.main(function(alm) {
+    var events = alm.events,
+        vdom   = alm.vdom,
+        utils  = alm.utils;
 
     // When an event happens, an action is sent here.
-    var actions = utils.mailbox({ type: Actions.NoOp });
+    var actions = alm.mailbox({ type: Actions.NoOp });
 
     // Do we have a saved model? If so, use it. Otherwise create an empty one.
     // Fires when the 'enter' key is pressed
@@ -218,7 +225,7 @@ var app = App.init('the_app')
     var save = model.recv((model) => utils.save_model(model));
 
     // When the model changes, update the input element with id `field`
-    var field_value = utils.port.outbound('field_value');
+    var field_value = alm.port.outbound('field_value');
     model.map((m) => m.field).connect(field_value);
 
     var el = vdom.el; // convenience

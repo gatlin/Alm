@@ -123,7 +123,7 @@ Public.Signal = {
  * will then expose the inner function for client applications to make
  * mailboxes.
  */
-function mailbox(runtime) {
+function setupMailboxes(runtime) {
     return function (base) {
         var signal = Signal.make();
         runtime.inputs.push(signal);
@@ -151,7 +151,7 @@ function mailbox(runtime) {
  * This function initializes the port constructors for a given runtime.
  */
 function setupPorts(runtime) {
-    runtime.utils.port.inbound = function(name) {
+    var inbound = function(name) {
         var signal = Signal.make();
         runtime.inputs.push(signal);
         runtime.ports[name] = {
@@ -162,7 +162,7 @@ function setupPorts(runtime) {
         return signal;
     };
 
-    runtime.utils.port.outbound = function(name) {
+    var outbound = function(name) {
         var signal = Signal.make();
         runtime.ports[name] = {
             listen: function(k) {
@@ -170,6 +170,11 @@ function setupPorts(runtime) {
             }
         };
         return signal;
+    };
+
+    return {
+        inbound: inbound,
+        outbound: outbound
     };
 }
 
@@ -188,7 +193,7 @@ function setupPorts(runtime) {
  * - a diff should be computed
  * - the DOM should be walked once, applying diffs as necessary.
  */
-var vdom = function(runtime) {
+function setupVdom(runtime) {
     var vdom = {};
     /**
      * A Node is an HTML node, which contains a tag, attributes, and 0 or more
@@ -222,7 +227,7 @@ var vdom = function(runtime) {
     vdom.render = function(node, root) {
         var tree = vdom.makeElement(node);
         var root = (typeof root !== 'undefined')
-            ? runtime.utils.byId(root)
+            ? runtime.byId(root)
             : runtime.domRoot;
         while (root.firstChild) {
             root.removeChild(root.firstChild);
@@ -292,6 +297,7 @@ App.init = function(root) {
         : document;
     var listeners = [];
     var inputs = [];
+    var ports = {};
     const timer = {
         programStart: Date.now(),
         now: function() { return Date.now(); }
@@ -332,10 +338,36 @@ App.init = function(root) {
         updating = false;
     }
 
-    // Elementary signals have names you can use
-    var events = { };
-    var ports = { };
+    // convenience because I dislike typing out document.getElementById
+    function byId(_id) {
+        return document.getElementById(_id);
+    }
 
+    /////
+    // Each subsystem needs a different piece of what will end up being the
+    // final runtime, so there are different initialization procedures which
+    // are given different objects containing their runtime dependencies. These
+    // are all put together in the final runtime object.
+    /////
+
+    // Initialize the mailbox system
+    var mailbox = setupMailboxes({ inputs: inputs, async: async, notify: notify });
+
+    // Set up the virtual dom
+    var vdom = setupVdom({ byId: byId, domRoot: domRoot });
+
+    // Set up ports (inbound and outbound constructors)
+    var port = setupPorts({ inputs: inputs, ports: ports, notify: notify });
+
+    // Initialize top-level event signals
+    var events = setupEvents({
+        inputs: inputs,
+        domRoot: domRoot,
+        addListener: addListener,
+        notify: notify
+    });
+
+    // The final runtime object
     const runtime = {
         domRoot: domRoot,
         timer: timer,
@@ -345,31 +377,14 @@ App.init = function(root) {
         setTimeout: setTimeout,
         events: events,
         async: async,
-        utils: {},
-        vdom: {},
-        ports: ports
+        mailbox: mailbox,
+        byId: byId,
+        port: port,
+        vdom: vdom,
+        ports: ports,
+        utils: {} // extensions
     };
 
-    setupEvents(runtime);
-
-    // Setup runtime utilities
-    runtime.utils = {
-        mailbox: mailbox(runtime),
-        byId: function(_id) {
-            return document.getElementById(_id);
-        },
-        port: {
-            inbound: null,
-            outbound: null
-        }
-    };
-
-    // Set up the virtual dom
-    runtime.vdom = vdom(runtime);
-
-    setupPorts(runtime);
-
-    console.log(runtime);
     return save(runtime);
 };
 
@@ -404,10 +419,19 @@ App.prototype = {
         })
         .then(k);
     },
+
     // The main procedure in which you can create signals and mailboxes
     main: function(k) {
         return this.runtime(function(runtime) {
-            return App.of(k(runtime.events, runtime.utils, runtime.vdom));
+            const alm = {
+                events: runtime.events,
+                vdom: runtime.vdom,
+                byId: runtime.byId,
+                mailbox: runtime.mailbox,
+                port: runtime.port,
+                utils: runtime.utils
+            };
+            return App.of(k(alm));
         });
     },
 
@@ -457,7 +481,7 @@ function setupEvents(runtime) {
     setupEvent('input', events.input);
     setupEvent('change', events.change);
 
-    runtime.events = events;
+    return events;
 }
 
 return Public;

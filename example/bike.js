@@ -18,9 +18,12 @@ var bikecalc = {
 
 var app = App.init('app_container')
 
-.main(function(events, utils, dom) {
+.main(function(alm) {
+    var events = alm.events;
+    var vdom   = alm.vdom;
+
     // user input updates
-    var updates = utils.mailbox(null);
+    var updates = alm.mailbox(null);
 
     var bikedata = updates.signal
         .reduce(new Evaluator('gainRatio', bikecalc), function(message, model) {
@@ -38,7 +41,7 @@ var app = App.init('app_container')
 
     bikedata
         .recv(function(unevaluated) {
-            var el = dom.el;
+            var el = vdom.el;
             var data = unevaluated.evaluate();
             var items = new Array();
 
@@ -66,7 +69,7 @@ var app = App.init('app_container')
             }
 
             var view = el('ul', { id: 'datum' }, items);
-            dom.render(view);
+            vdom.render(view);
         });
 
 })
