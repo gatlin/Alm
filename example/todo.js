@@ -1,3 +1,5 @@
+(function() {
+'use strict';
 /**
  * A task is some text and an id. It may be completed or not. It may currently
  * edited or not as well.
@@ -265,3 +267,4 @@ var app = App.init('the_app')
 
 app.ports['field_value'].listen((v) => document.getElementById('field').value = v );
 
+})();
