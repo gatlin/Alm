@@ -1,3 +1,5 @@
+(function() {
+'use strict';
 /*
  * Used in concert with the `Evaluator` from loeb.js, which allows easy and
  * succinct modeling of inter-dependent computations like a spreadsheet.
@@ -70,3 +72,4 @@ var app = App.init('app_container')
 })
 
 .start();
+})();
