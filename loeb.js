@@ -172,7 +172,7 @@ Evaluator.prototype = {
         var me = this;
         var newValues = {};
         for (var key in this.values) {
-            let new_me = new Evaluator(key, me.values);
+            var new_me = new Evaluator(key, me.values);
             newValues[key] = new_me;
         }
         return new Evaluator(this.focus, newValues);
