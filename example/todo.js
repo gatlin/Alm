@@ -59,9 +59,9 @@ function update(action, model) {
         case Actions.Add:
             if (model.field !== "") {
                 model.tasks.push(new_task(model.field, model.uid));
-                model.uid = model.uid + 1;
-                model.field = "";
             }
+            model.uid = model.uid + 1;
+            model.field = "";
             return model;
 
         case Actions.Delete:
@@ -114,8 +114,10 @@ function update(action, model) {
     return model;
 }
 
+var guid = guid_factory();
+
 // Set up the application runtime state
-var app = App.init('the_app')
+var app = App.init('main')
 
 // for shits / examples, let's modify the runtime on the client side. This is
 // essentially how plugins and extensions would work.
@@ -135,12 +137,14 @@ var app = App.init('the_app')
 
 /* Now we wire our signals together.
  * Note that `main` is only given a subset of the runtime, to prevent silly
- * mistakes from happening: events, vdom, utils, mailbox, and port
- * manipulation.
+ * mistakes from happening.
+ *
+ * The return value is a signal producing virtual DOM trees. These will be
+ * rendered by the runtime as new trees are produced.
  */
 .main(function(alm) {
     var events = alm.events,
-        vdom   = alm.vdom,
+        el     = alm.el,
         utils  = alm.utils;
 
     // When an event happens, an action is sent here.
@@ -222,29 +226,22 @@ var app = App.init('the_app')
         .reduce(utils.initial_model(), update);
 
     // a model listener - saves the model
-    var save = model.recv((model) => utils.save_model(model));
+    model.recv((model) => utils.save_model(model));
 
-    // When the model changes, update the input element with id `field`
-    var field_value = alm.port.outbound('field_value');
-    model.map((m) => m.field).connect(field_value);
-
-    var el = vdom.el; // convenience
-    // a model listener - renders the model
-    var render = model.recv(function(model) {
+    // We return a signal which produces virtual DOM trees from models
+    return model.map(function(model) {
         var task_items = model.tasks.map(function(task) {
-            // do we show the text or the edit field?
             var content = (task.editing)
                 ? el('input', {
                     type: 'text',
                     class: 'editing',
                     id: 'edit-task-'+task.uid,
-                    value: task.description  })
+                    value: task.description })
                 : el('label', {
                     class: (task.completed) ? 'completed' : 'task_text',
                     id: 'text-task-'+task.uid
-                }, [task.description] );
+                }, [task.description]);
 
-            // Checkbox attributes vary slightly depending on task completion
             var checkboxAttrs = {
                 type: 'checkbox',
                 class: 'toggle',
@@ -264,14 +261,23 @@ var app = App.init('the_app')
                     id: 'del-task-'+task.uid })
             ]);
         });
-        vdom.render(el('ul', { class: 'todo_list' }, task_items), 'wrapper');
+
+        return el('section', { id: 'the_app', class: 'app-'+guid() }, [
+            el('header', { id: 'header', class: 'header-'+guid() }, [
+                el('h1', {}, ["Obligatory Todo App"]) ]),
+            el('input', {
+                type: 'text',
+                id: 'field',
+                placeholder: 'What needs to be done?',
+                value: model.field
+            }),
+            el('ul', { class: 'todo_list', id: 'todo_list' }, task_items)
+        ]);
     });
 
 })
 
 // and begin the application
 .start();
-
-app.ports['field_value'].listen((v) => document.getElementById('field').value = v );
 
 })();

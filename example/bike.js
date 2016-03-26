@@ -1,5 +1,7 @@
 (function() {
 'use strict';
+
+var guid = guid_factory();
 /*
  * Used in concert with the `Evaluator` from loeb.js, which allows easy and
  * succinct modeling of inter-dependent computations like a spreadsheet.
@@ -21,6 +23,7 @@ var app = App.init('app_container')
 .main(function(alm) {
     var events = alm.events;
     var vdom   = alm.vdom;
+    var el     = alm.el;
 
     // user input updates
     var updates = alm.mailbox(null);
@@ -39,14 +42,12 @@ var app = App.init('app_container')
             value: parseFloat(evt.target.value)
         }));
 
-    bikedata
-        .recv(function(unevaluated) {
-            var el = vdom.el;
-            var data = unevaluated.evaluate();
+    return bikedata
+        .map((unevaluated) => unevaluated.evaluate())
+        .map(function(data) {
             var items = new Array();
-
             items.push(el('li', { id: 'gainRatio', class: 'output' },
-                    [ 'Gain ratio: ' + data.extract().toFixed(2) ]));
+                [ 'Gain ratio: ' + data.extract().toFixed(2) ]));
 
             var labels = {
                   'crankLength': 'Crank Length (mm)'
@@ -57,7 +58,7 @@ var app = App.init('app_container')
 
             for (var key in labels) {
                 var label = labels[key];
-                items.push(el('li', { class: 'datum-group' }, [
+                items.push(el('li', { class: 'datum-group', id: 'datum-group-'+key }, [
                     el('label', { 'for': key, id: 'label-'+ key },
                         [label]),
                     el('input', {
@@ -69,8 +70,8 @@ var app = App.init('app_container')
             }
 
             var view = el('ul', { id: 'datum' }, items);
-            vdom.render(view);
-        });
+            return view;
+    });
 
 })
 

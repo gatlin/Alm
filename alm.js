@@ -100,6 +100,9 @@ Signal.prototype = {
         var s = new Signal.output(f);
         this.connect(s);
         return s;
+    },
+    done: function() {
+        return this;
     }
 };
 
@@ -193,14 +196,14 @@ function setupPorts(runtime) {
  * - a diff should be computed
  * - the DOM should be walked once, applying diffs as necessary.
  */
-function setupVdom(runtime) {
+function setupVdom(alm) {
     var vdom = {};
 
     /**
      * A Node is an HTML node, which contains a tag, attributes, and 0 or more
      * child nodes.
      */
-    var el = vdom.el = function(tag, attrs, children) {
+    vdom.el = function(tag, attrs, children) {
         return {
             tag: tag,
             attrs: attrs,
@@ -210,30 +213,180 @@ function setupVdom(runtime) {
         };
     };
 
-    vdom.makeDOMElement = function(node) {
+    function makeDOMTree(node) {
+        if (node === null) { return null; }
         if (typeof node === 'string') {
             return document.createTextNode(node);
         }
         var el = document.createElement(node.tag);
+
         for (var key in node.attrs) {
             el.setAttribute(key, node.attrs[key]);
         }
         for (var i = 0; i < node.children.length; i++) {
-            var child = vdom.makeDOMElement(node.children[i]);
+            var child = makeDOMTree(node.children[i]);
             el.appendChild(child);
         }
         return el;
-    };
+    }
 
-    vdom.render = function(node, root) {
-        var tree = vdom.makeDOMElement(node);
-        var root = (typeof root !== 'undefined')
-            ? runtime.byId(root)
-            : runtime.domRoot;
+    function initialDOM(tree) {
+        var root = alm.domRoot;
+        var domTree = makeDOMTree(tree);
         while (root.firstChild) {
             root.removeChild(root.firstChild);
         }
-        root.appendChild(tree);
+        root.appendChild(domTree);
+    }
+
+    /* Computes differences between two trees, which are then used to update
+     * the DOM instead of wholesale replacing it.
+     *
+     * FIXME doesn't work if the nodes are text
+     */
+    function diff(nA, nB, _diffs) {
+        if (typeof nB === 'string') {
+
+        }
+        if (nA.tag !== nB.tag) {
+            diffs.push({
+                action: 'remove',
+                target: nA
+            }, {
+                action: 'insert',
+                target: nB
+            });
+            return diffs;
+        }
+        var diffs = (typeof _diffs !== 'undefined')
+            ? _diffs
+            : [];
+
+        // These two trees have the same element, let's go through their
+        // attributes
+        for (var attr in nA.attrs) {
+            if (!(attr in nB.attrs)) {
+                diffs.push({
+                    action: 'removeAttr',
+                    target: nB.attrs.id,
+                    attr: attr
+                });
+            }
+        }
+        for (var attr in nB.attrs) {
+            if (!nA.attrs[attr] || (nA.attrs[attr] !== nB.attrs[attr])) {
+                // we need to insert the attribute into node A
+                diffs.push({
+                    action: 'setAttr',
+                    target: nB.attrs.id,
+                    attr: attr,
+                    value: nB.attrs[attr]
+                });
+            }
+        }
+        var len = 0;
+        var nA_len = (typeof nA !== 'string') ? nA.children.length : 0;
+        var nB_len = (typeof nB !== 'string') ? nB.children.length : 0;
+        if (nA_len && nB_len) {
+            len = (nA_len < nB_len) ? nA_len : nB_len;
+        }
+        for (var i = 0; i < len; i++) {
+            diff(nA.children[i], nB.children[i], diffs);
+        }
+        if (nB_len > nA_len) {
+            for (var i = nA_len; i < nB_len; i++) {
+                diffs.push({
+                    action: 'insert',
+                    target: nB.children[i]
+                });
+            }
+        }
+        if (nA_len > nB_len) {
+            for (var i = nB_len; i < nA_len; i++) {
+                diffs.push({
+                    action: 'remove',
+                    target: nA.children[i]
+                });
+            }
+        }
+
+        return diffs;
+    }
+
+    function applyDiff(d) {
+        var root = alm.domRoot;
+        switch (d.action) {
+        case 'insert':
+            var p = alm.byId(d.parent);
+            p.appendChild(makeDOMTree(d.target));
+            break;
+
+        case 'remove':
+            var c = alm.byId(d.target.attrs.id);
+            c.parentNode.removeChild(c);
+            break;
+
+        case 'setAttr':
+            var target = alm.byId(d.target);
+            target.setAttribute(d.attr, d.value);
+            break;
+
+        case 'removeAttr':
+            var target = alm.byId(d.target);
+            target.removeAttribute(d.attr);
+            break;
+
+        default:
+            console.log('Unrecognized DOM action');
+        };
+    }
+
+    /* Apply a list of diffs to the DOM.
+     */
+    function applyDiffs(diffs) {
+        for (var i = 0; i < diffs.length; i++) {
+            applyDiff(diffs[i]);
+        }
+    }
+
+    /**
+     * Rendering the virtual DOM
+     *
+     * App.main returns a signal emitting DOM trees. Building them is cheap
+     * enough.
+     *
+     * However, re-renderig the actual DOM each time is problematic for the
+     * following reasons:
+     *
+     *   1. It's slow, so dreadfully, miserably slow.
+     *   2. Were you typing somewhere? Well, you just lost focus.
+     *
+     * The strategy adopted here is to compute the differences between the new
+     * tree and the old tree. This set of changes is then applied to the actual
+     * DOM, manipulating it as little as possible.
+     *
+     * The current, perhaps naive, algorithm is thus:
+     *
+     *   1. If the root node type is different, re-render and finish.
+     *   2. For each different attribute, generate a diff.
+     *   3. Recurse on each child, until one list is empty.
+     */
+    vdom.render = function(view_signal) {
+        view_signal.reduce(null,function(update, tree) {
+            var root = alm.domRoot;
+            // Construct a new tree and save it
+            if (tree === null) {
+                initialDOM(update);
+            }
+            else {
+                // for now, we do the same thing in both cases
+                var diffs = diff(tree, update);
+                console.log(diffs);
+                applyDiffs(diffs);
+            }
+            return update;
+        })
+        .done();
     };
 
     return vdom;
@@ -355,7 +508,7 @@ App.init = function(root) {
     var mailbox = setupMailboxes({ inputs: inputs, async: async, notify: notify });
 
     // Set up the virtual dom
-    var vdom = setupVdom({ byId: byId, domRoot: domRoot });
+    var vdom = setupVdom({ byId: byId, domRoot: domRoot, mailbox: mailbox });
 
     // Set up ports (inbound and outbound constructors)
     var port = setupPorts({ inputs: inputs, ports: ports, notify: notify });
@@ -383,6 +536,7 @@ App.init = function(root) {
         port: port,
         vdom: vdom,
         ports: ports,
+        view: null, // dom tree which main will provide
         utils: {} // extensions
     };
 
@@ -426,18 +580,22 @@ App.prototype = {
         return this.runtime(function(runtime) {
             const alm = {
                 events: runtime.events,
-                vdom: runtime.vdom,
                 byId: runtime.byId,
                 mailbox: runtime.mailbox,
                 port: runtime.port,
-                utils: runtime.utils
+                utils: runtime.utils,
+                el: runtime.vdom.el
             };
-            return App.of(k(alm));
+            runtime.view = k(alm);
+            runtime.vdom.render(runtime.view);
+            return save(runtime);
         });
     },
 
     start: function() {
-        const ports = this.runApp().runtime.ports;
+        const runtime = this.runApp();
+        const ports = runtime.ports;
+
         return {
             ports: ports
         };
