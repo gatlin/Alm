@@ -13,7 +13,7 @@ a button, displays the count, and updates the page title in kind.
 
 ```html
 <!doctype html>
-<html lang='en_US'>
+<html lang='en-US'>
 <head>
     <meta charset='utf-8'></meta>
     <title>Alm example</title>
