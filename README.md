@@ -140,8 +140,26 @@ combinators provided are:
   - `.recv(k)` -- values are given to `k` and the return value is ignored. The
     resulting signal cannot have children.
   - `.done()` -- creates a signal which simply stops propgation.
+  - `.reduce()` -- let's talk about this one.
 
-Others are planned.
+The name "reduce" comes from its similarity to `Array.reduce()` in JavaScript,
+and analogous operations in other languages. You can *reduce* the values of a
+signal into some aggregate value by supplying an initial base value, and a
+function consuming a signal value and the previous state of the reduction to
+yield a new one.
+
+Ah. That word. *State*.
+
+A signal created with `.reduce()` is the only place where you can store
+stateful values signal values. The "todo" example makes this a bit clearer. A
+reducer signal can listen to events from, say, a mailbox or a port, modify the
+state, and emit the new state to its listeners.
+
+The listeners may save the state, or re-render it on screen, or initiate some
+kind of asynchronous task. The take away is, *signals are also how you manage
+application state.*
+
+Others combinators are planned.
 
 ### Mailboxes
 
