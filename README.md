@@ -86,6 +86,11 @@ If you have python installed you can easily look at the examples by running:
 
 and browsing to `http://127.0.0.1:8000/example/todo.html` or others.
 
+The simple and "todo" examples are also live, respectively, at
+
+  - http://niltag.net/almtest
+  - http://nilag.net/todo
+
 1. What?
 ---
 
