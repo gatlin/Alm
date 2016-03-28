@@ -201,6 +201,15 @@ function setupVdom(alm) {
         this.content = content;
         this.children = children;
         this.type = type;
+        if (this.type === VTree.Text) {
+            this.key = this.content;
+        } else {
+            if (typeof this.content.attrs.id !== 'undefined') {
+                this.key = this.content.attrs.id;
+            } else {
+                this.key = null;
+            }
+        }
     }
 
     VTree.Text = 0;
@@ -252,8 +261,8 @@ function setupVdom(alm) {
         var index = {};
         for (var i = 0; i < tree.children.length; i++) {
             var kid = tree.children[i];
-            if (kid.type === VTree.Node && kid.content.attrs.id !== 'undefined') {
-                index[kid.content.attrs.id] = i;
+            if (kid.key != null) {
+                index[kid.key] = i;
             }
         }
         return index;
@@ -267,13 +276,18 @@ function setupVdom(alm) {
      * modifies the DOM in place.
      */
     function diff(a, b, dom) {
-        if (b == null) {
+        if (typeof b === 'undefined' || b == null) {
             dom.parentNode.removeChild(dom);
             return;
         }
         if (b.type === VTree.Node) {
             if (a.type === VTree.Node
-             && a.content.tag === b.content.tag) {
+             && a.content.tag === b.content.tag
+             && a.key === b.key) {
+                // we're just modifying an existing node
+                for (var bAttr in b.content.attrs) {
+                    dom.setAttribute(bAttr, b.content.attrs[bAttr]);
+                }
                 for (var aAttr in a.content.attrs) {
                     if (!(aAttr in b.content.attrs)) {
                         dom.removeAttribute(aAttr);
@@ -281,40 +295,28 @@ function setupVdom(alm) {
                         dom.setAttribute(aAttr, b.content.attrs[aAttr]);
                     }
                 }
-                for (var bAttr in b.content.attrs) {
-                    dom.setAttribute(bAttr, b.content.attrs[bAttr]);
-                }
-                var aIndex = makeIndex(a);
-                var bIndex = makeIndex(b);
+                // diff children
+                // FIXME this currently does not handle insertion or removal
                 for (var i = 0; i < b.children.length; i++) {
-                    var kid = b.children[i];
-                    if (kid.type === VTree.Text
-                     || typeof kid.content.attrs.id === 'undefined'
-                     || !(kid.content.attrs.id in aIndex)) {
-                        var kid_b = makeDOMNode(kid);
-                        dom.appendChild(kid_b);
-                    } else {
-                        var kid_a = aIndex[kid.content.attrs.id];
-                        diff(a.children[kid_a], kid, dom.childNodes[kid_a]);
-                    }
-                }
-                for (var i = 0; i < a.children.length; i++) {
-                    var kid = a.children[i];
-                    if (kid.type === VTree.Text
-                     || typeof kid.content.attrs.id === 'undefined'
-                     || !(kid.content.attrs.id in bIndex)) {
-                        dom.removeChild(dom.childNodes[i]);
-                    }
+                    var kidA = a.children[i];
+                    var kidB = b.children[i];
+                    diff(kidA, kidB, dom.childNodes[i]);
                 }
             } else {
+                // we're replacing
+                if (a.type === VTree.Node) {
+                    dom.parentNode.replaceChild(dom, makeDOMNode(b));
+                } else {
+                    // ???
+                }
+            }
+        } else {
+            if (a.type === VTree.Node) {
                 var p = dom.parentNode;
                 p.replaceChild(dom, makeDOMNode(b));
-                return;
+            } else {
+                dom.innerText = b.content;
             }
-        } else { // Text
-            var p = dom.parentNode;
-            p.replaceChild(dom, makeDOMNode(b));
-            return;
         }
     }
 

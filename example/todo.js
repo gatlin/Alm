@@ -87,8 +87,6 @@ var app = App.init('main')
     var other = alm.mailbox(0);
 
     other.signal.reduce(0, function(sigV, oldV) {
-        console.log('sigV');
-        console.log(sigV);
         return oldV + 1;
     });
 
@@ -96,12 +94,7 @@ var app = App.init('main')
     var model = actions.signal
         .reduce(utils.initial_model(),
         function (action, model) {
-            console.log(action);
             switch (action.type) {
-
-                case Actions.UpdateField:
-                    model.field = action.content;
-                    return model;
 
                 case Actions.Add:
                     if (model.field) {
@@ -109,6 +102,10 @@ var app = App.init('main')
                         model.uid = model.uid + 1;
                         model.field = "";
                     }
+                    return model;
+
+                case Actions.UpdateField:
+                    model.field = action.content;
                     return model;
 
                 case Actions.Delete:
@@ -190,6 +187,22 @@ var app = App.init('main')
             type: Actions.UpdateField,
             content: evt.target.value
         }));
+
+    events.mouse.dblclick
+        .filter((evt) => evt.target.className === 'task_text')
+        .recv((evt) => actions.send({
+            type: Actions.Editing,
+            content: parseInt(evt.target.id.split('-')[2])
+        }));
+
+    onEnter
+        .filter((evt) => evt.target.className === 'editing')
+        .recv((evt) => actions.send({
+            type: Actions.UpdateTask,
+            content: {
+                uid: parseInt(evt.target.id.split('-')[2]),
+                text: evt.target.value
+            }}));
 
     // a model listener - saves the model
     model.recv((model) => utils.save_model(model));
