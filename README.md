@@ -55,7 +55,6 @@ var app = App.init() // binds to `document.body`
 
     // we return a signal of virtual DOMs, built with the `el` helper
     return update_number.map(function(n) {
-        page_title.send(n);
         let incr_btn = el('button', { id: 'incr_button' }, [ "Increment!" ]);
         let reset_btn = el('button', { id: 'reset_button' }, [ "Reset" ]);
         let total = el('p', { id: 'total' }, [ 'Clicked ' + n + ' times']);
