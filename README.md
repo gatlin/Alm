@@ -89,7 +89,7 @@ and browsing to `http://127.0.0.1:8000/example/todo.html` or others.
 The simple and "todo" examples are also live, respectively, at
 
   - http://niltag.net/almtest
-  - http://nilag.net/todo
+  - http://niltag.net/todo
 
 1. What?
 ---
