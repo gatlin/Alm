@@ -155,9 +155,9 @@ yield a new one.
 Ah. That word. *State*.
 
 A signal created with `.reduce()` is the only place where you can store
-stateful values signal values. The "todo" example makes this a bit clearer. A
-reducer signal can listen to events from, say, a mailbox or a port, modify the
-state, and emit the new state to its listeners.
+stateful signal values. The "todo" example makes this a bit clearer. A reducer
+signal can listen to events from, say, a mailbox or a port, modify the state,
+and emit the new state to its listeners.
 
 The listeners may save the state, or re-render it on screen, or initiate some
 kind of asynchronous task. The take away is, *signals are also how you manage
