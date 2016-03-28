@@ -84,11 +84,6 @@ var app = App.init('main')
 
     // When an event happens, an action is sent here.
     var actions = alm.mailbox({ type: Actions.NoOp });
-    var other = alm.mailbox(0);
-
-    other.signal.reduce(0, function(sigV, oldV) {
-        return oldV + 1;
-    });
 
     // a signal broadcasting updated models
     var model = actions.signal
@@ -203,6 +198,16 @@ var app = App.init('main')
                 uid: parseInt(evt.target.id.split('-')[2]),
                 text: evt.target.value
             }}));
+
+    events.keyboard.blur
+        .filter((evt) => evt.target.className === 'editing')
+        .recv((evt) => actions.send({
+            type: Actions.UpdateTask,
+            content: {
+                uid: parseInt(evt.target.id.split('-')[2]),
+                text: evt.target.value
+            }
+        }));
 
     // a model listener - saves the model
     model.recv((model) => utils.save_model(model));

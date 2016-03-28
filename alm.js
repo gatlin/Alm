@@ -212,6 +212,16 @@ function setupVdom(alm) {
         }
     }
 
+    VTree.prototype = {
+        keyEq: function(other) {
+            var me = this;
+            if (me.key == null || other.key == null) {
+                return false;
+            }
+            return (me.key === other.key);
+        }
+    }
+
     VTree.Text = 0;
     VTree.Node = 1;
 
@@ -276,7 +286,61 @@ function setupVdom(alm) {
      * modifies the DOM in place.
      */
     function diff(a, b, dom) {
+        if (typeof b === 'undefined' || b == null) {
+            dom.parentNode.removeChild(dom);
+            return;
+        }
+        if (typeof a === 'undefined' || a == null) {
+            // `dom` will be the parent of `a`
+            dom.appendChild(makeDOMNode(b));
+            return;
+        }
+        if (b.type === VTree.Node) {
+            if (a.type === VTree.Node) {
+                if (a.content.tag === b.content.tag) {
+                    // reconcile element attributes
+                    for (var attr in b.content.attrs) {
+                        dom[attr] = b.content.attrs[attr];
+                        dom.setAttribute(attr,b.content.attrs[attr]);
+                    }
+                    for (var attr in a.content.attrs) {
+                        if (!(attr in b.content.attrs)) {
+                            dom.removeAttribute(attr);
+                        }
+                    }
 
+                    // Naively compare children. Works but is un-optimized.
+                    var aLen = a.children.length;
+                    var bLen = b.children.length;
+                    var len = aLen > bLen ? aLen : bLen;
+
+                    for (let i = 0; i < len; i++) {
+                        let kidA = a.children[i];
+                        let kidB = b.children[i];
+                        if (kidA) {
+                            diff(kidA, kidB, dom.childNodes[i]);
+                        } else {
+                            diff(null, kidB, dom);
+                        }
+                    }
+                } else {
+                    // tags are not the same
+                    var p = dom.parentNode;
+                    p.insertBefore(makeDOMNode(b), dom);
+                    p.removeChild(dom);
+                }
+            } else {
+                // b is a node, a is text
+                var p = dom.parentNode;
+                p.insertBefore(makeDOMNode(b), dom);
+                p.removeChild(dom);
+            }
+        } else {
+            // both are text
+            var p = dom.parentNode;
+            p.insertBefore(makeDOMNode(b), dom);
+            p.removeChild(dom);
+        }
     }
 
     /**
@@ -370,7 +434,7 @@ function modify(f) {
 App.init = function(root) {
     const domRoot = (typeof root !== 'undefined')
         ? document.getElementById(root)
-        : document;
+        : document.body;
     var listeners = [];
     var inputs = [];
     var ports = {};
@@ -433,7 +497,7 @@ App.init = function(root) {
     var vdom = setupVdom({ byId: byId, domRoot: domRoot, mailbox: mailbox });
 
     // Set up ports (inbound and outbound constructors)
-    var port = setupPorts({ inputs: inputs, ports: ports, notify: notify });
+    var port = setupPorts({ inputs: inputs, ports: ports, notify: notify, mailbox: mailbox });
 
     // Initialize top-level event signals
     var events = setupEvents({
@@ -500,7 +564,7 @@ App.prototype = {
     // The main procedure in which you can create signals and mailboxes
     main: function(k) {
         return this.runtime(function(runtime) {
-            const alm = {
+            let alm = {
                 events: runtime.events,
                 byId: runtime.byId,
                 mailbox: runtime.mailbox,
@@ -515,10 +579,9 @@ App.prototype = {
     },
 
     start: function() {
-        var runtime = this.runApp();
-        var ports = runtime.ports;
+        var runtime = this.runApp().runtime;
         return {
-            ports: ports,
+            ports: runtime.ports,
             inputs: runtime.inputs
         };
     }

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang='en_US'>
+<head>
+    <meta charset='utf-8'></meta>
+    <title>Alm example</title>
+</head>
+<body>
+<script src='loeb.js'></script>
+<script src='alm.js'></script>
+<script>
+window.onload = function() {
+'use strict';
+var app = App.init()
+
+.main(function(alm) {
+    // save typing ;)
+    let events = alm.events,
+        el     = alm.el;
+
+    // A place to send events
+    let action = alm.mailbox(false);
+
+    // Application state lives inside of signal reducers.
+    let update_number = action.signal
+        .reduce(0, (incr, total) => (incr) ? total + 1 : 0);
+
+    // Ports let you communicate with the outside world!
+    let page_title = alm.port.outbound('title');
+    update_number.connect(page_title);
+
+    // increment button click events
+    events.mouse.click
+        .filter((evt) => evt.target.id === 'incr_button')
+        .recv((evt) => action.send(true));
+
+    // reset button click events
+    events.mouse.click
+        .filter((evt) => evt.target.id === 'reset_button')
+        .recv((evt) => action.send(false));
+
+    // we return a virtual DOM, built with the `el` helper
+    return update_number.map(function(n) {
+        page_title.send(n);
+        let incr_btn = el('button', { id: 'incr_button' }, [ "Increment!" ]);
+        let reset_btn = el('button', { id: 'reset_button' }, [ "Reset" ]);
+        let total = el('p', { id: 'total' }, [ 'Clicked ' + n + ' times']);
+        return el('div', { id: 'main' }, [ incr_btn, reset_btn, total ]);
+    });
+})
+
+.start(); // And away we go ~~~
+
+// Update the page title using the port
+app.ports['title'].listen(function(n) {
+    let base = 'Alm Example';
+    if (n > 0) {
+        document.title = '('+n+') ' + base;
+    } else {
+        document.title = base;
+    }
+});
+};
+</script>
+</body>
+</html>
