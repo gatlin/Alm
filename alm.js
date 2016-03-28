@@ -276,52 +276,7 @@ function setupVdom(alm) {
      * modifies the DOM in place.
      */
     function diff(a, b, dom) {
-        if (typeof b === 'undefined' || b == null) {
-            dom.parentNode.removeChild(dom);
-            return;
-        }
-        if (b.type === VTree.Node) {
-            if (a.type === VTree.Node
-             && a.content.tag === b.content.tag
-             && a.key === b.key) {
-                // we're just modifying an existing node
-                for (var bAttr in b.content.attrs) {
-                    dom.setAttribute(bAttr, b.content.attrs[bAttr]);
-                }
-                for (var aAttr in a.content.attrs) {
-                    if (!(aAttr in b.content.attrs)) {
-                        dom.removeAttribute(aAttr);
-                    } else {
-                        dom.setAttribute(aAttr, b.content.attrs[aAttr]);
-                    }
-                }
-                // diff children
-                // FIXME this currently does not handle insertion or removal
-                for (var i = 0; i < b.children.length; i++) {
-                    var kidA = a.children[i];
-                    var kidB = b.children[i];
-                    diff(kidA, kidB, dom.childNodes[i]);
-                }
-            } else {
-                // we're replacing
-                if (a.type === VTree.Node) {
-                    console.log(dom);
-                    var p = dom.parentNode;
-                    console.log(p);
-                    //p.replaceChild(dom, makeDOMNode(b));
-                    p.appendChild(makeDOMNode(b));
-                } else {
-                    // ???
-                }
-            }
-        } else {
-            if (a.type === VTree.Node) {
-                var p = dom.parentNode;
-                p.replaceChild(dom, makeDOMNode(b));
-            } else {
-                dom.innerText = b.content;
-            }
-        }
+
     }
 
     /**
