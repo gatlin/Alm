@@ -76,16 +76,6 @@ var app = App.init('main')
     var actions = alm.mailbox({ type: Actions.NoOp });
 
     // a signal broadcasting updated models
-    /**
-     * Given some action structure and a model compute and return a new model.
-     *
-     * This function is "pure" in some sense: it has no access to the application
-     * runtime, though obviously this being JavaScript it has access to the browser
-     * the same as any other component. But without intentionally misusing this
-     * library, there is no way to send signals, update the view, or otherwise
-     * change the runtime state.
-     */
-
     var model = actions.signal
         .reduce(utils.initial_model(),
         function (action, model) {
