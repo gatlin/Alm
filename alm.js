@@ -32,7 +32,9 @@ function Signal(fn, receivers) {
 
 // A signal which just repeats what it has been given.
 Signal.make = function() {
-    return new Signal(id, []);
+    return new Signal(function(x) {
+        return x;
+    }, []);
 };
 
 Signal.constant = function(x) {
@@ -40,18 +42,23 @@ Signal.constant = function(x) {
 };
 
 Signal.output = function(handler) {
-    return new Signal(function(v) {
+    var sig = new Signal(function(v) {
         handler(v);
     }, []);
+    sig.isOutput = true;
+    return sig;
 };
 
 Signal.prototype = {
-    send: function(timestamp, inputId, value) {
-        const result = this.fn(value);
+    send: function(timestamp, _id, value) {
+        if (_id !== this.id) {
+            return;
+        }
+        var result = this.fn(value);
         if (result === undefined) { return; }
         if (this.isOutput) { return; }
         for (var i = this.receivers.length; i--; ) {
-            this.receivers[i].send(timestamp, this.id, result);
+            this.receivers[i].send(timestamp, this.receivers[i].id, result);
         }
     },
     connect: function(receiver) {
@@ -69,9 +76,8 @@ Signal.prototype = {
     filter: function(cond) {
         var sig = this;
         var r = new Signal(function(v) {
-            var result = sig.fn(v);
-            if (cond(result)) {
-                return result;
+            if (cond(v)) {
+                return v;
             }
         });
         this.connect(r);
@@ -79,9 +85,9 @@ Signal.prototype = {
     },
     reduce: function(initial, reducer) {
         var sig = this;
-        var state = initial;
+        let state = initial;
         var r = new Signal(function(v) {
-            state = reducer(sig.fn(v), state);
+            state = reducer(v, state);
             return state;
         });
         this.connect(r);
@@ -90,7 +96,7 @@ Signal.prototype = {
     map: function(f) {
         var sig = this;
         var r = new Signal(function(v) {
-            return f(sig.fn(v));
+            return f(v);
         });
         this.connect(r);
         return r;
@@ -128,9 +134,9 @@ Public.Signal = {
  */
 function setupMailboxes(runtime) {
     return function (base) {
-        var signal = Signal.make();
+        let signal = Signal.make();
         runtime.inputs.push(signal);
-        var mb = {
+        let mb = {
             signal: signal,
             send: function(v) {
                 runtime.async(function() {
@@ -186,45 +192,48 @@ function setupPorts(runtime) {
  *
  * A simple virtual DOM implementation to allow for programmatic construction
  * and manipulation of HTML elements.
- *
- * This is very simple for now.
- *
- * How this should work: the VDOM exists inside of a signal reduction. When the
- * model updates:
- *
- * - a new VDOM should be computed
- * - a diff should be computed
- * - the DOM should be walked once, applying diffs as necessary.
  */
 function setupVdom(alm) {
     var vdom = {};
 
+    /* A virtual DOM is a rose tree. */
+    function VTree(content, children, type) {
+        this.content = content;
+        this.children = children;
+        this.type = type;
+    }
+
+    VTree.Text = 0;
+    VTree.Node = 1;
+
     /**
-     * A Node is an HTML node, which contains a tag, attributes, and 0 or more
-     * child nodes.
+     * Convenience constructor for VTree.
      */
     vdom.el = function(tag, attrs, children) {
-        return {
+        var children_trees = (typeof children === 'undefined')
+            ? []
+            : children.map(function(kid) {
+                return (typeof kid === 'string')
+                    ? new VTree(kid, [], VTree.Text)
+                    : kid; });
+        return new VTree({
             tag: tag,
-            attrs: attrs,
-            children: (typeof children !== 'undefined')
-                ? children
-                : []
-        };
+            attrs: attrs
+        }, children_trees, VTree.Node);
     };
 
-    function makeDOMTree(node) {
-        if (node === null) { return null; }
-        if (typeof node === 'string') {
-            return document.createTextNode(node);
+    function makeDOMNode(tree) {
+        if (tree === null) { return null; }
+        if (tree.type === VTree.Text) {
+            return document.createTextNode(tree.content);
         }
-        var el = document.createElement(node.tag);
+        var el = document.createElement(tree.content.tag);
 
-        for (var key in node.attrs) {
-            el.setAttribute(key, node.attrs[key]);
+        for (var key in tree.content.attrs) {
+            el.setAttribute(key, tree.content.attrs[key]);
         }
-        for (var i = 0; i < node.children.length; i++) {
-            var child = makeDOMTree(node.children[i]);
+        for (var i = 0; i < tree.children.length; i++) {
+            var child = makeDOMNode(tree.children[i]);
             el.appendChild(child);
         }
         return el;
@@ -232,120 +241,80 @@ function setupVdom(alm) {
 
     function initialDOM(tree) {
         var root = alm.domRoot;
-        var domTree = makeDOMTree(tree);
+        var domTree = makeDOMNode(tree);
         while (root.firstChild) {
             root.removeChild(root.firstChild);
         }
         root.appendChild(domTree);
     }
 
-    /* Computes differences between two trees, which are then used to update
-     * the DOM instead of wholesale replacing it.
+    function makeIndex(tree) {
+        var index = {};
+        for (var i = 0; i < tree.children.length; i++) {
+            var kid = tree.children[i];
+            if (kid.type === VTree.Node && kid.content.attrs.id !== 'undefined') {
+                index[kid.content.attrs.id] = i;
+            }
+        }
+        return index;
+    }
+
+    /* Computes the differences between two trees, and modifies the DOM
+     * accordingly.
      *
-     * FIXME doesn't work if the nodes are text
+     * The algorithm traverses the two trees as well as the DOM. In lieu of
+     * computing patches to be applied at a later time, for now this simply
+     * modifies the DOM in place.
      */
-    function diff(nA, nB, _diffs) {
-        if (typeof nB === 'string') {
-
+    function diff(a, b, dom) {
+        if (b == null) {
+            dom.parentNode.removeChild(dom);
+            return;
         }
-        if (nA.tag !== nB.tag) {
-            diffs.push({
-                action: 'remove',
-                target: nA
-            }, {
-                action: 'insert',
-                target: nB
-            });
-            return diffs;
-        }
-        var diffs = (typeof _diffs !== 'undefined')
-            ? _diffs
-            : [];
-
-        // These two trees have the same element, let's go through their
-        // attributes
-        for (var attr in nA.attrs) {
-            if (!(attr in nB.attrs)) {
-                diffs.push({
-                    action: 'removeAttr',
-                    target: nB.attrs.id,
-                    attr: attr
-                });
+        if (b.type === VTree.Node) {
+            if (a.type === VTree.Node
+             && a.content.tag === b.content.tag) {
+                for (var aAttr in a.content.attrs) {
+                    if (!(aAttr in b.content.attrs)) {
+                        dom.removeAttribute(aAttr);
+                    } else {
+                        dom.setAttribute(aAttr, b.content.attrs[aAttr]);
+                    }
+                }
+                for (var bAttr in b.content.attrs) {
+                    dom.setAttribute(bAttr, b.content.attrs[bAttr]);
+                }
+                var aIndex = makeIndex(a);
+                var bIndex = makeIndex(b);
+                for (var i = 0; i < b.children.length; i++) {
+                    var kid = b.children[i];
+                    if (kid.type === VTree.Text
+                     || typeof kid.content.attrs.id === 'undefined'
+                     || !(kid.content.attrs.id in aIndex)) {
+                        var kid_b = makeDOMNode(kid);
+                        dom.appendChild(kid_b);
+                    } else {
+                        var kid_a = aIndex[kid.content.attrs.id];
+                        diff(a.children[kid_a], kid, dom.childNodes[kid_a]);
+                    }
+                }
+                for (var i = 0; i < a.children.length; i++) {
+                    var kid = a.children[i];
+                    if (kid.type === VTree.Text
+                     || typeof kid.content.attrs.id === 'undefined'
+                     || !(kid.content.attrs.id in bIndex)) {
+                        dom.removeChild(dom.childNodes[i]);
+                    }
+                }
+            } else {
+                var p = dom.parentNode;
+                p.replaceChild(dom, makeDOMNode(b));
+                return;
             }
-        }
-        for (var attr in nB.attrs) {
-            if (!nA.attrs[attr] || (nA.attrs[attr] !== nB.attrs[attr])) {
-                // we need to insert the attribute into node A
-                diffs.push({
-                    action: 'setAttr',
-                    target: nB.attrs.id,
-                    attr: attr,
-                    value: nB.attrs[attr]
-                });
-            }
-        }
-        var len = 0;
-        var nA_len = (typeof nA !== 'string') ? nA.children.length : 0;
-        var nB_len = (typeof nB !== 'string') ? nB.children.length : 0;
-        if (nA_len && nB_len) {
-            len = (nA_len < nB_len) ? nA_len : nB_len;
-        }
-        for (var i = 0; i < len; i++) {
-            diff(nA.children[i], nB.children[i], diffs);
-        }
-        if (nB_len > nA_len) {
-            for (var i = nA_len; i < nB_len; i++) {
-                diffs.push({
-                    action: 'insert',
-                    target: nB.children[i]
-                });
-            }
-        }
-        if (nA_len > nB_len) {
-            for (var i = nB_len; i < nA_len; i++) {
-                diffs.push({
-                    action: 'remove',
-                    target: nA.children[i]
-                });
-            }
-        }
-
-        return diffs;
-    }
-
-    function applyDiff(d) {
-        var root = alm.domRoot;
-        switch (d.action) {
-        case 'insert':
-            var p = alm.byId(d.parent);
-            p.appendChild(makeDOMTree(d.target));
-            break;
-
-        case 'remove':
-            var c = alm.byId(d.target.attrs.id);
-            c.parentNode.removeChild(c);
-            break;
-
-        case 'setAttr':
-            var target = alm.byId(d.target);
-            target.setAttribute(d.attr, d.value);
-            break;
-
-        case 'removeAttr':
-            var target = alm.byId(d.target);
-            target.removeAttribute(d.attr);
-            break;
-
-        default:
-            console.log('Unrecognized DOM action');
-        };
-    }
-
-    /* Apply a list of diffs to the DOM.
-     */
-    function applyDiffs(diffs) {
-        for (var i = 0; i < diffs.length; i++) {
-            applyDiff(diffs[i]);
+        } else { // Text
+            var p = dom.parentNode;
+            p.replaceChild(dom, makeDOMNode(b));
+            return;
         }
     }
 
@@ -361,15 +330,9 @@ function setupVdom(alm) {
      *   1. It's slow, so dreadfully, miserably slow.
      *   2. Were you typing somewhere? Well, you just lost focus.
      *
-     * The strategy adopted here is to compute the differences between the new
-     * tree and the old tree. This set of changes is then applied to the actual
-     * DOM, manipulating it as little as possible.
+     * Thus a virtual DOM is used. The new tree is compared to the old tree and
+     * a set of patches are produced, which are then applied to the actual DOM.
      *
-     * The current, perhaps naive, algorithm is thus:
-     *
-     *   1. If the root node type is different, re-render and finish.
-     *   2. For each different attribute, generate a diff.
-     *   3. Recurse on each child, until one list is empty.
      */
     vdom.render = function(view_signal) {
         view_signal.reduce(null,function(update, tree) {
@@ -380,9 +343,7 @@ function setupVdom(alm) {
             }
             else {
                 // for now, we do the same thing in both cases
-                var diffs = diff(tree, update);
-                console.log(diffs);
-                applyDiffs(diffs);
+                diff(tree, update, root.firstChild);
             }
             return update;
         })
@@ -593,11 +554,11 @@ App.prototype = {
     },
 
     start: function() {
-        const runtime = this.runApp();
-        const ports = runtime.ports;
-
+        var runtime = this.runApp();
+        var ports = runtime.ports;
         return {
-            ports: ports
+            ports: ports,
+            inputs: runtime.inputs
         };
     }
 };

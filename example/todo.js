@@ -48,71 +48,6 @@ var Actions = {
  * library, there is no way to send signals, update the view, or otherwise
  * change the runtime state.
  */
-function update(action, model) {
-
-    switch (action.type) {
-
-        case Actions.UpdateField:
-            model.field = action.content;
-            return model;
-
-        case Actions.Add:
-            if (model.field !== "") {
-                model.tasks.push(new_task(model.field, model.uid));
-            }
-            model.uid = model.uid + 1;
-            model.field = "";
-            return model;
-
-        case Actions.Delete:
-            var uid = action.content;
-            var idx = -1;
-            for (var i = 0; i < model.tasks.length; i++) {
-                if (model.tasks[i].uid === uid) {
-                    idx = i;
-                    break;
-                }
-            }
-            if (idx > -1) {
-                model.tasks.splice(idx, 1);
-            }
-            return model;
-
-        case Actions.Complete:
-            var uid = action.content;
-            for (var i = model.tasks.length; i--; ) {
-                if (model.tasks[i].uid === uid) {
-                    model.tasks[i].completed = !model.tasks[i].completed;
-                    break;
-                }
-            }
-            return model;
-
-        case Actions.Editing:
-            var uid = action.content;
-            for (var i = model.tasks.length; i--; ) {
-                if (model.tasks[i].uid === uid) {
-                    model.tasks[i].editing = true;
-                    break;
-                }
-            }
-            return model;
-
-        // Editing is finished
-        case Actions.UpdateTask:
-            var uid = action.content.uid;
-            for (var i = model.tasks.length; i--; ) {
-                if (model.tasks[i].uid === uid) {
-                    model.tasks[i].editing = false;
-                    model.tasks[i].description = action.content.text;
-                    break;
-                }
-            }
-            return model;
-    }
-
-    return model;
-}
 
 var guid = guid_factory();
 
@@ -149,81 +84,112 @@ var app = App.init('main')
 
     // When an event happens, an action is sent here.
     var actions = alm.mailbox({ type: Actions.NoOp });
+    var other = alm.mailbox(0);
 
-    // Do we have a saved model? If so, use it. Otherwise create an empty one.
-    // Fires when the 'enter' key is pressed
-    var onEnter = events.keyboard.keydown
-        .filter((evt) => evt.keyCode === 13)
-
-    // When enter is pressed inside the main input field, add a task
-    onEnter
-        .filter((evt) => evt.target.id === 'field')
-        .recv((evt) =>
-            actions.send({ type: Actions.Add }) );
-
-    // When enter is pressed inside a task edit field, finish updating the task
-    onEnter
-        .filter((evt) => evt.target.className === 'editing')
-        .recv((evt) =>
-            actions.send({
-                type: Actions.UpdateTask,
-                content: {
-                    uid: parseInt(evt.target.id.split('-')[2]),
-                    text: evt.target.value
-                } }) );
-
-    // Whenever the text box is updated, update the model 'field'
-    events.input
-        .filter((evt) => evt.target.id === 'field')
-        .recv((evt) =>
-            actions.send({
-                type: Actions.UpdateField,
-                content: evt.target.value }) );
-
-    // Was a delete button clicked?
-    events.mouse.click
-        .filter((evt) => evt.target.className === 'delete_button')
-        .recv((evt) =>
-            actions.send({
-                type: Actions.Delete,
-                content: parseInt(evt.target.id.split('-')[2])
-            }) );
-
-    // was the checkbox next to a task clicked?
-    events.change
-        .filter((evt) => evt.target.className === 'toggle')
-        .recv((evt) =>
-            actions.send({
-                type: Actions.Complete,
-                content: parseInt(evt.target.id.split('-')[2])
-            })
-        );
-
-    // was a task double clicked? Start editing!
-    events.mouse.dblclick
-        .filter((evt) => evt.target.className === 'task_text')
-        .recv((evt) =>
-            actions.send({
-                type: Actions.Editing,
-                content: parseInt(evt.target.id.split('-')[2])
-            })
-        );
-
-    events.keyboard.blur
-        .filter((evt) => evt.target.className === 'editing')
-        .recv((evt) =>
-            actions.send({
-                type: Actions.UpdateTask,
-                content: {
-                    uid: parseInt(evt.target.id.split('-')[2]),
-                    text: evt.target.value
-                }
-            })
-        );
+    other.signal.reduce(0, function(sigV, oldV) {
+        console.log('sigV');
+        console.log(sigV);
+        return oldV + 1;
+    });
 
     // a signal broadcasting updated models
     var model = actions.signal
-        .reduce(utils.initial_model(), update);
+        .reduce(utils.initial_model(),
+        function (action, model) {
+            console.log(action);
+            switch (action.type) {
+
+                case Actions.UpdateField:
+                    model.field = action.content;
+                    return model;
+
+                case Actions.Add:
+                    if (model.field) {
+                        model.tasks.push(new_task(model.field, model.uid));
+                        model.uid = model.uid + 1;
+                        model.field = "";
+                    }
+                    return model;
+
+                case Actions.Delete:
+                    var uid = action.content;
+                    var idx = -1;
+                    for (var i = 0; i < model.tasks.length; i++) {
+                        if (model.tasks[i].uid === uid) {
+                            idx = i;
+                            break;
+                        }
+                    }
+                    if (idx > -1) {
+                        model.tasks.splice(idx, 1);
+                    }
+                    return model;
+
+                case Actions.Complete:
+                    var uid = action.content;
+                    for (var i = model.tasks.length; i--; ) {
+                        if (model.tasks[i].uid === uid) {
+                            model.tasks[i].completed = !model.tasks[i].completed;
+                            break;
+                        }
+                    }
+                    return model;
+
+                case Actions.Editing:
+                    var uid = action.content;
+                    for (var i = model.tasks.length; i--; ) {
+                        if (model.tasks[i].uid === uid) {
+                            model.tasks[i].editing = true;
+                            break;
+                        }
+                    }
+                    return model;
+
+                // Editing is finished
+                case Actions.UpdateTask:
+                    var uid = action.content.uid;
+                    for (var i = model.tasks.length; i--; ) {
+                        if (model.tasks[i].uid === uid) {
+                            model.tasks[i].editing = false;
+                            model.tasks[i].description = action.content.text;
+                            break;
+                        }
+                    }
+                    return model;
+            }
+
+            return model;
+        });
+
+    events.change
+        .filter((evt) => evt.target.className === 'toggle')
+        .recv((evt) => actions.send({
+            type: Actions.Complete,
+            content: parseInt(evt.target.id.split('-')[2])
+        }));
+
+    events.mouse.click
+        .filter((evt) => evt.target.className === 'delete_button')
+        .recv((evt) => actions.send({
+            type: Actions.Delete,
+            content: parseInt(evt.target.id.split('-')[2])
+        }));
+
+    // A signal of 'enter' key events
+    var onEnter = events.keyboard.keydown
+        .filter((evt) => evt.keyCode === 13);
+
+    onEnter.filter((evt) => evt.target.id === 'field')
+        .recv((evt) => actions.send({
+            type: Actions.Add
+        }));
+
+    events.input
+        .filter((evt) => evt.target.id === 'field')
+        .recv((evt) => actions.send({
+            type: Actions.UpdateField,
+            content: evt.target.value
+        }));
 
     // a model listener - saves the model
     model.recv((model) => utils.save_model(model));

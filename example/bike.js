@@ -68,11 +68,9 @@ var app = App.init('app_container')
                         value: data.values[key]
                     })]));
             }
-
             var view = el('ul', { id: 'datum' }, items);
             return view;
     });
-
 })
 
 .start();
