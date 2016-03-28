@@ -305,7 +305,11 @@ function setupVdom(alm) {
             } else {
                 // we're replacing
                 if (a.type === VTree.Node) {
-                    dom.parentNode.replaceChild(dom, makeDOMNode(b));
+                    console.log(dom);
+                    var p = dom.parentNode;
+                    console.log(p);
+                    //p.replaceChild(dom, makeDOMNode(b));
+                    p.appendChild(makeDOMNode(b));
                 } else {
                     // ???
                 }
