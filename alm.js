@@ -23,7 +23,6 @@ var guid = Public.guid = guid_factory(); // from loeb.js
 
 // perhaps I should just store a value and let methods handle transformations?
 function Signal(fn, receivers) {
-    this.id = guid();
     this.fn = fn;
     this.receivers = (typeof receivers !== 'undefined')
         ? receivers
@@ -50,15 +49,12 @@ Signal.output = function(handler) {
 };
 
 Signal.prototype = {
-    send: function(timestamp, _id, value) {
-        if (_id !== this.id) {
-            return;
-        }
+    send: function(timestamp, value) {
         var result = this.fn(value);
         if (result === undefined) { return; }
         if (this.isOutput) { return; }
         for (var i = this.receivers.length; i--; ) {
-            this.receivers[i].send(timestamp, this.receivers[i].id, result);
+            this.receivers[i].send(timestamp, result);
         }
     },
     connect: function(receiver) {
@@ -135,12 +131,12 @@ Public.Signal = {
 function setupMailboxes(runtime) {
     return function (base) {
         let signal = Signal.make();
-        runtime.inputs.push(signal);
+        let sig_id = runtime.addInput(signal);
         let mb = {
             signal: signal,
             send: function(v) {
                 runtime.async(function() {
-                    runtime.notify(signal.id, v);
+                    runtime.notify(sig_id, v);
                 });
             }
         };
@@ -161,18 +157,18 @@ function setupMailboxes(runtime) {
  */
 function setupPorts(runtime) {
     var inbound = function(name) {
-        var signal = Signal.make();
-        runtime.inputs.push(signal);
+        let signal = Signal.make();
+        let sig_id = runtime.addInput(signal);
         runtime.ports[name] = {
             send: function(v) {
-                runtime.notify(signal.id,v);
+                runtime.notify(sig_id,v);
             }
         };
         return signal;
     };
 
     var outbound = function(name) {
-        var signal = Signal.make();
+        let signal = Signal.make();
         runtime.ports[name] = {
             listen: function(k) {
                 signal.recv(k);
@@ -469,13 +465,14 @@ App.init = function(root) {
         }
         updating = true;
         var timestamp = timer.now();
-        for (var i = inputs.length; i--; ) {
-            var inp = inputs[i];
-            if (inp.id === inputId) {
-                inp.send(timestamp, inputId, v);
-            }
-        }
+        inputs[inputId].send(timestamp, v);
         updating = false;
+    }
+
+    function addInput(inp) {
+        var _id = inputs.length;
+        inputs.push(inp);
+        return _id;
     }
 
     // convenience because I dislike typing out document.getElementById
@@ -491,27 +488,29 @@ App.init = function(root) {
     /////
 
     // Initialize the mailbox system
-    var mailbox = setupMailboxes({ inputs: inputs, async: async, notify: notify });
+    var mailbox = setupMailboxes({ addInput: addInput, async: async, notify: notify });
 
     // Set up the virtual dom
     var vdom = setupVdom({ byId: byId, domRoot: domRoot, mailbox: mailbox });
 
     // Set up ports (inbound and outbound constructors)
-    var port = setupPorts({ inputs: inputs, ports: ports, notify: notify, mailbox: mailbox });
+    var port = setupPorts({ addInput: addInput, ports: ports, notify: notify, mailbox: mailbox });
 
     // Initialize top-level event signals
     var events = setupEvents({
-        inputs: inputs,
+        addInput: addInput,
         domRoot: domRoot,
         addListener: addListener,
         notify: notify
     });
 
+    const utils = {};
+
     // The final runtime object
     const runtime = {
         domRoot: domRoot,
         timer: timer,
-        inputs: inputs,
+        addInput: addInput,
         addListener: addListener,
         notify: notify,
         setTimeout: setTimeout,
@@ -522,11 +521,10 @@ App.init = function(root) {
         port: port,
         vdom: vdom,
         ports: ports,
-        view: null, // dom tree which main will provide
         utils: {} // extensions
     };
 
-    return save(runtime);
+    return save(Object.freeze(runtime));
 };
 
 App.prototype = {
@@ -572,8 +570,8 @@ App.prototype = {
                 utils: runtime.utils,
                 el: runtime.vdom.el
             };
-            runtime.view = k(alm);
-            runtime.vdom.render(runtime.view);
+            let view = k(alm);
+            runtime.vdom.render(view);
             return save(runtime);
         });
     },
@@ -581,8 +579,7 @@ App.prototype = {
     start: function() {
         var runtime = this.runApp().runtime;
         return {
-            ports: runtime.ports,
-            inputs: runtime.inputs
+            ports: runtime.ports
         };
     }
 };
@@ -609,9 +606,9 @@ function setupEvents(runtime) {
     };
 
     function setupEvent(evtName, sig) {
-        runtime.inputs.push(sig);
+        var sig_id = runtime.addInput(sig);
         runtime.addListener([sig], runtime.domRoot, evtName, function(evt) {
-            runtime.notify(sig.id, evt);
+            runtime.notify(sig_id, evt);
         });
     }
 
