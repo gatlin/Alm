@@ -159,10 +159,9 @@ function Evaluator(focus, values) {
 
 Evaluator.prototype = {
     map: function(f) {
-        var me = this;
         var newValues = {};
-        for (var key in me.values) {
-            newValues[key] = f(me.values[key]);
+        for (var key in this.values) {
+            newValues[key] = f(this.values[key]);
         }
         return new Evaluator(this.focus, newValues);
     },
@@ -178,17 +177,19 @@ Evaluator.prototype = {
         return this.values[this.focus];
     },
     duplicate: function() {
-        var me = this;
         var newValues = {};
         for (var key in this.values) {
-            var new_me = new Evaluator(key, me.values);
+            var new_me = new Evaluator(key, this.values);
             newValues[key] = new_me;
         }
         return new Evaluator(this.focus, newValues);
     },
     at: function(k) {
-        var me = this;
-        return me.values[k](me);
+        return this.values[k](this);
+    },
+    set: function(k,v) {
+        this.values[k] = v;
+        return this;
     }
 };
 
@@ -255,4 +256,3 @@ instance(Log, Monad);
 
 return module;
 }));
-
