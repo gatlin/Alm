@@ -605,7 +605,8 @@ function setupEvents(runtime) {
             focusout: Signal.make()
         },
         input: Signal.make(),
-        change: Signal.make()
+        change: Signal.make(),
+        load: Signal.make()
     };
 
     function setupEvent(evtName, sig) {
@@ -624,6 +625,7 @@ function setupEvents(runtime) {
     setupEvent('blur', events.keyboard.blur);
     setupEvent('input', events.input);
     setupEvent('change', events.change);
+    setupEvent('load', events.load);
 
     return events;
 }
