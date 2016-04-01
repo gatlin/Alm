@@ -579,7 +579,8 @@ App.prototype = {
     start: function() {
         var runtime = this.runApp().runtime;
         return {
-            ports: runtime.ports
+            ports: runtime.ports,
+            utils: runtime.utils
         };
     }
 };
