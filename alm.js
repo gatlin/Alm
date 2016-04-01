@@ -564,6 +564,8 @@ App.prototype = {
         return this.runtime(function(runtime) {
             let alm = {
                 events: runtime.events,
+                async: runtime.async,
+                setTimeout: runtime.setTimeout,
                 byId: runtime.byId,
                 mailbox: runtime.mailbox,
                 port: runtime.port,
