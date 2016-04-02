@@ -415,11 +415,18 @@ function runtime() {
     });
 }
 
-function save(newruntime) {
+function save(modified) {
     return new App(function(runtime) {
+        if (runtime) {
+            for (let key in runtime) {
+                if (!key in modified) {
+                    modified[key] = runtime[key];
+                }
+            }
+        }
         return {
             value: undefined,
-            runtime: newruntime
+            runtime: Object.freeze(modified)
         };
     });
 }
@@ -495,16 +502,16 @@ App.init = function(root) {
     /////
 
     // Initialize the mailbox system
-    var mailbox = setupMailboxes({ addInput: addInput, async: async, notify: notify });
+    let mailbox = setupMailboxes({ addInput: addInput, async: async, notify: notify });
 
     // Set up the virtual dom
-    var vdom = setupVdom({ byId: byId, domRoot: domRoot, mailbox: mailbox });
+    let vdom = setupVdom({ byId: byId, domRoot: domRoot, mailbox: mailbox });
 
     // Set up ports (inbound and outbound constructors)
-    var port = setupPorts({ addInput: addInput, ports: ports, notify: notify, mailbox: mailbox });
+    let port = setupPorts({ addInput: addInput, ports: ports, notify: notify, mailbox: mailbox });
 
     // Initialize top-level event signals
-    var events = setupEvents({
+    let events = setupEvents({
         addInput: addInput,
         domRoot: domRoot,
         addListener: addListener,
@@ -514,7 +521,7 @@ App.init = function(root) {
     const utils = {};
 
     // The final runtime object
-    const runtime = {
+    return save({
         domRoot: domRoot,
         timer: timer,
         addInput: addInput,
@@ -529,14 +536,12 @@ App.init = function(root) {
         vdom: vdom,
         ports: ports,
         utils: {} // extensions
-    };
-
-    return save(Object.freeze(runtime));
+    });
 };
 
 App.prototype = {
     map: function(f) {
-        var me = this;
+        let me = this;
         return new App(function(runtime) {
             var prev = me.runApp(runtime);
             return {
@@ -546,10 +551,10 @@ App.prototype = {
         });
     },
     flatten: function() {
-        var me = this;
+        let me = this;
         return new App(function(runtime) {
-            var prev = me.runApp(runtime);
-            var inner = prev.value.runApp(prev.runtime);
+            let prev = me.runApp(runtime);
+            let inner = prev.value.runApp(prev.runtime);
             return inner;
         });
     },
@@ -557,8 +562,13 @@ App.prototype = {
     runtime: function(k) {
         return this.then(function(_) {
             return new App(function(runtime) {
+                console.log('Frozen in runtime method: ' + Object.isFrozen(runtime));
+                let unfrozen = {};
+                for (var key in runtime) {
+                    unfrozen[key] = runtime[key];
+                }
                 return {
-                    value: runtime,
+                    value: unfrozen,
                     runtime: runtime
                 };
             });
@@ -582,7 +592,7 @@ App.prototype = {
             };
             let view = k(alm);
             runtime.vdom.render(view);
-            return save(runtime);
+            return save(alm);
         });
     },
 
