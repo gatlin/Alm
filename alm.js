@@ -562,13 +562,8 @@ App.prototype = {
     runtime: function(k) {
         return this.then(function(_) {
             return new App(function(runtime) {
-                console.log('Frozen in runtime method: ' + Object.isFrozen(runtime));
-                let unfrozen = {};
-                for (var key in runtime) {
-                    unfrozen[key] = runtime[key];
-                }
                 return {
-                    value: unfrozen,
+                    value: runtime,
                     runtime: runtime
                 };
             });
