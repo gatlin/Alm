@@ -577,7 +577,8 @@ App.prototype = {
                 mailbox: runtime.mailbox,
                 port: runtime.port,
                 utils: runtime.utils,
-                el: runtime.vdom.el
+                el: runtime.vdom.el,
+                timer: runtime.timer
             };
             let view = k(alm);
             runtime.vdom.render(view);
