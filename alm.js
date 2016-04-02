@@ -209,6 +209,10 @@ function setupVdom(alm) {
     }
 
     VTree.prototype = {
+        subscribe: function(mailbox) {
+            this.mailbox = mailbox;
+            return this;
+        },
         keyEq: function(other) {
             var me = this;
             if (me.key == null || other.key == null) {
@@ -250,6 +254,9 @@ function setupVdom(alm) {
         for (var i = 0; i < tree.children.length; i++) {
             var child = makeDOMNode(tree.children[i]);
             el.appendChild(child);
+        }
+        if (tree.mailbox) {
+            tree.mailbox.send(el);
         }
         return el;
     }
