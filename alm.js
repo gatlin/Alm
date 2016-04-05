@@ -417,13 +417,17 @@ function runtime() {
 
 function save(modified) {
     return new App(function(runtime) {
+        console.log(modified);
         if (runtime) {
+            console.log(runtime);
             for (let key in runtime) {
-                if (!key in modified) {
+                if (!(key in modified)) {
                     modified[key] = runtime[key];
                 }
             }
+            console.log(modified);
         }
+        console.log('---');
         return {
             value: undefined,
             runtime: Object.freeze(modified)

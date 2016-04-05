@@ -80,16 +80,22 @@ app.ports['title'].listen(function(n) {
 ```
 
 This example and a more elaborate todo application may be found in `example/`.
-If you have python installed you can easily look at the examples by running:
 
-    $> python -m SimpleHTTPServer
+If you have `node` and `npm` installed, you can execute the following to view
+the examples locally:
 
-and browsing to `http://127.0.0.1:8000/example/todo.html` or others.
+    $> npm i --global gulp-cli
+    $> npm i --save-dev gulp
+    $> npm i --save-dev gulp-serve
+    $> gulp serve
 
-The simple and "todo" examples are also live, respectively, at
+And navigate to `http://localhost:3000/example`.
+
+The examples are also live here:
 
   - http://niltag.net/almtest
   - http://niltag.net/todo
+  - http://niltag.net/gainratio
 
 1. What?
 ---
