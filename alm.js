@@ -290,7 +290,9 @@ function setupVdom(alm) {
      */
     function diff(a, b, dom) {
         if (typeof b === 'undefined' || b == null) {
-            dom.parentNode.removeChild(dom);
+            if (dom) {
+                dom.parentNode.removeChild(dom);
+            }
             return;
         }
         if (typeof a === 'undefined' || a == null) {
@@ -316,12 +318,16 @@ function setupVdom(alm) {
                     var aLen = a.children.length;
                     var bLen = b.children.length;
                     var len = aLen > bLen ? aLen : bLen;
+                    let kids = new Array();
+                    for (var i = 0; i < len; i++) {
+                        kids.push(dom.childNodes[i]);
+                    }
 
                     for (let i = 0; i < len; i++) {
                         let kidA = a.children[i];
                         let kidB = b.children[i];
                         if (kidA) {
-                            diff(kidA, kidB, dom.childNodes[i]);
+                            diff(kidA, kidB, kids[i]);
                         } else {
                             diff(null, kidB, dom);
                         }
@@ -417,17 +423,13 @@ function runtime() {
 
 function save(modified) {
     return new App(function(runtime) {
-        console.log(modified);
         if (runtime) {
-            console.log(runtime);
             for (let key in runtime) {
                 if (!(key in modified)) {
                     modified[key] = runtime[key];
                 }
             }
-            console.log(modified);
         }
-        console.log('---');
         return {
             value: undefined,
             runtime: Object.freeze(modified)
