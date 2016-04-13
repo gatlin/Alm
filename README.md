@@ -145,7 +145,7 @@ The `init` method takes an optional String ID of an HTML element to bind to. If
 this is not provided then the App will simply bind itself to `document.body`.
 This allows multiple Apps to be present on the same page. All browser events
 which occur within this scope are gathered at the top level and made available
-as Signals.
+as Signals, and the DOM within this scope is managed entirely by the App.
 
 Finally the `start` method is how you actually kick off the application. It
 returns an object with various runtime data, notably *ports* (see below) so
