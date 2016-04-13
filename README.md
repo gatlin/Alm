@@ -109,113 +109,102 @@ papers. If you want theory, I can't recommend them enough. Alm is partly my
 desire to learn more about FRP, and partly to make Elm's power available in
 plain old ECMAScript.
 
-A high level overview of the parts of this library follows. It may be helpful
-to refer to the sample application in the synopsis.
-
-### App
-
-Alm applications are represented by `App` objects. `App`s contain the runtime
-state for an application and are bound to a document element (either one
-specified by id when invoking `init()`, or `document.body` by default).
-
-An `App` sets up top-level event listeners for every event emitted in its
-document scope, and exposes them as signals (see below).
-
-Signals, mailboxes, and ports may be defined within `.main()` and exist solely
-within this context. This way mulitple `App`s may be present on the same page
-and not interfere with each other on accident.
-
-An `App` only provides full access to its runtime using the `.runtime()`
-method.
+The following is a high-level overview of the major parts of Alm.
 
 ### Signals
 
-The foundation of Alm is the *signal*. Signals are how events are routed
-throughout an application.
+The core of Alm is the *Signal*. Signals are best thought of as time-varying
+values. You may use the Signal methods to map, reduce, and filter Signals,
+which in turn produce new Signals.
 
-A signal is little more than a function paired with an array of other signals.
-When a signal is sent a value, it passes it to the function, and gives each of
-its listeners the result (unless the result is `undefined`).
+When a Signal's value updates all Signals defined in terms of it will also
+update. In this way Signals form the basis of all message dispatching in Alm.
 
-Basic signals emitting browser events are provided for a number of events; you
-may add others using the `App.runtime()` method (see "Advanced").
+You may also connect two unrelated Signals using the `.connect` method, which
+is useful especially with *mailboxes* and *ports* (see below).
 
-#### Signal operations
+Signals form the backbone of most of the other features.
 
-Signals are asynchronous streams, and you can manipulate them. For now, basic
-combinators provided are:
+### App
 
-  - `.map(f)` -- creates a new signal mapping upstream values with `f`
-  - `.filter(cond)` -- only permits values to propagate if `cond()` is true
-  - `.recv(k)` -- values are given to `k` and the return value is ignored. The
-    resulting signal cannot have children.
-  - `.done()` -- creates a signal which simply stops propgation.
-  - `.reduce()` -- let's talk about this one.
+An *App* is a representation of the runtime data and scope for a given Alm
+application. An App is initialized with an optional HTML element to bind to for
+event capture and DOM manipulation, and presents a few methods for setting up
+the application runtime before starting.
 
-The name "reduce" comes from its similarity to `Array.reduce()` in JavaScript,
-and analogous operations in other languages. You can *reduce* the values of a
-signal into some aggregate value by supplying an initial base value, and a
-function consuming a signal value and the previous state of the reduction to
-yield a new one.
+The `runtime` method is just that - it provides access to the full hidden
+runtime object so that any utilities or extensions to Alm's default
+capabilities may be defined. `runtime` expects a handler function which is
+given this object.
 
-Ah. That word. *State*.
+The `main` method presents a limited subset of the runtime. It is here that you
+define your Signal graph and compose the flow of data through your application.
+`main` expects you to return a Signal of *virtual DOM* objects (see below).
 
-A signal created with `.reduce()` is the only place where you can store
-stateful signal values. The "todo" example makes this a bit clearer. A reducer
-signal can listen to events from, say, a mailbox or a port, modify the state,
-and emit the new state to its listeners.
+The `init` method takes an optional String ID of an HTML element to bind to. If
+this is not provided then the App will simply bind itself to `document.body`.
+This allows multiple Apps to be present on the same page. All browser events
+which occur within this scope are gathered at the top level and made available
+as Signals.
 
-The listeners may save the state, or re-render it on screen, or initiate some
-kind of asynchronous task. The take away is, *signals are also how you manage
-application state.*
+Finally the `start` method is how you actually kick off the application. It
+returns an object with various runtime data, notably *ports* (see below) so
+that they can be used elsewhere in the page.
 
-Others combinators are planned.
-
-### Mailboxes
-
-Mailboxes are signals which are given a default value, and which fire at least
-once with this value. Sending a value to a mailbox is asynchronous - the
-browser can delay sending the value until it has finished other tasks.
-
-The values received by a mailbox may be accessed using its `signal` property.
-
-### Ports
-
-Ports are signals which allow communication between an `App` and the
-surrounding browser context. Ports come in two flavors: *inbound* and
-*outbound*, both with respect to the `App`.
-
-The return value of `App.init()...start()` contains an object with all the
-defined ports.
+App is useful because the runtime is not a property which can be accessed or
+manipulated without using the `runtime` or `main` methods, and the latter only
+in a limited way. It is set up to take advantage of efficiencies afforded by
+`Object.freeze`, though at this early stage of development this is most likely
+not optimal yet.
 
 ### Virtual DOM
 
-The `.main()` method of an `App` expects a function returning a signal of
-*virtual DOM* objects. You create these with the `el()` function.
+Using the `el` helper provided in the runtime, you can programmatically define
+your interface. `App.main` expects a Signal of virtual DOM objects, which means
+that you can refresh your user interface declaratively. Behind the scenes Alm
+is able to relatively-efficiently compute the difference between the old DOM
+and the new one and avoid destroying and recreating elements more than it has
+to.
 
-The first time a value is emitted, Alm constructs an actual DOM inside the
-`App` scope. Each subsequent virtual DOM is compared to the previous one and
-the actual DOM is only manipulated when necessary.
+As a result, inputs which are focused stay focused on updates.
 
-### Advanced
+`el` takes three arguments: a String HTML tag; an object of attributes; and an
+optional Array of child DOM elements, which may be calls to `el` or String
+literals for text values.
 
-Before `.main()` but after `.init()` you may modify the runtime using the
-`.runtime()` method. Just return `save(new_runtime)` and voila!
+Additionally, the object created by `el` has a method `subscribe`. If you give
+`subscribe` a *mailbox* (see below) then every time the DOM node is re-rendered
+the mailbox will receive the node and can make use of it.
 
-The `util` key in the runtime state is an (initially empty) object where you
-can put custom functionality. For instance, you might add a `save()` function
-which saves application models. Or you might add more signals to the basic
-`events`.
+### Mailboxes
 
-If the API is going to change significantly it will likely be here first, but
-this is where Alm may be modified and extended freely while still ensuring the
-runtime state is safely hidden from the outside.
+A *mailbox* is essentially a Signal to which you may send values. The `mailbox`
+function in the Alm runtime requires a default value which is emitted when the
+application starts up. Mailboxes have `.signal` properties which may be used to
+build other Signals.
+
+In other words, mailboxes are Signals which emit *at least* one value and which
+you may send more values to emit.
+
+### Ports
+
+A *port* is a way to interface with the surrounding JavaScript environment;
+after all, it is highly unlikely in a complex application that you won't be
+using other libraries for important things.
+
+Ports are basically signals which either allow you to send values *out* of the
+application or receive values coming *into* the application. The example app in
+the synopsis illustrates this.
 
 2. Status
 ---
 
 THIS IS NOT READY FOR PRIMETIME DON'T YOU EVEN THINK ABOUT USING THIS SOME
 PLACE IMPORTANT AND THEN GETTING MAD NOPE DON'T EVEN.
+
+That said, the example applications demonstrate Alm's expressiveness and power
+even at this immature stage. Feel free to contribute, and if you do use it the
+author would greatly appreciate any feedback or commentary!
 
 3. LICENSE
 ---
