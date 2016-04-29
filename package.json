@@ -8,6 +8,7 @@
     "files": [ "lib" ],
     "devDependencies": {
         "gulp": "3.9.x",
-        "gulp-serve": "1.2.x"
+        "gulp-serve": "1.2.x",
+        "gulp-concat": "2.6.X"
     }
 }
