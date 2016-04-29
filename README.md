@@ -19,7 +19,6 @@ a button, displays the count, and updates the page title in kind.
     <title>Alm example</title>
 </head>
 <body>
-<script src='loeb.js'></script>
 <script src='alm.js'></script>
 <script>
 window.onload = function() {
@@ -84,9 +83,7 @@ This example and a more elaborate todo application may be found in `example/`.
 If you have `node` and `npm` installed, you can execute the following to view
 the examples locally:
 
-    $> npm i --global gulp-cli
-    $> npm i --save-dev gulp
-    $> npm i --save-dev gulp-serve
+    $> npm install
     $> gulp serve
 
 And navigate to `http://localhost:3000/example`.
