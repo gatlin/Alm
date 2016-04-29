@@ -83,6 +83,7 @@ This example and a more elaborate todo application may be found in `example/`.
 If you have `node` and `npm` installed, you can execute the following to view
 the examples locally:
 
+    $> npm i --global gulp-cli
     $> npm install
     $> gulp serve
 
