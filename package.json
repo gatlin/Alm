@@ -1,0 +1,13 @@
+{
+    "name":"alm",
+    "version":"0.0.1",
+    "homepage": "https://github.com/gatlin/Alm",
+    "description": "A functional reactive JavaScript GUI library",
+    "main": "alm.js",
+    "license": "GPL-3",
+    "files": [ "lib" ],
+    "devDependencies": {
+        "gulp": "3.9.x",
+        "gulp-serve": "1.2.x"
+    }
+}
