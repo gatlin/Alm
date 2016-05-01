@@ -3,47 +3,79 @@
 <head>
     <meta charset='utf-8'></meta>
     <title>Alm example</title>
+<style type='text/css'>
+div#view {
+    width: 50%;
+    margin: 0 auto;
+}
+</style>
 </head>
 <body>
+    <div id='view'></div>
 <script src='../alm.js'></script>
 <script>
 window.onload = function() {
 'use strict';
-var app = App.init()
+var app = App.init({domRoot: 'view'})
 
 .main(function(alm) {
     // save typing ;)
     let events = alm.events,
         el     = alm.el;
 
-    // A place to send events
-    let action = alm.mailbox(false);
-
-    // Application state lives inside of signal reducers.
-    let update_number = action.signal
-        .reduce(0, (incr, total) => (incr) ? total + 1 : 0);
-
-    // Ports let you communicate with the outside world!
+    let action = alm.mailbox({type: 'noop'});
     let page_title = alm.port.outbound('title');
-    update_number.connect(page_title);
 
-    // increment button click events
+    let model = action.signal
+        .reduce({ counter: 0, coords: { x: 0, y: 0 } },
+        function(actn, mdl) {
+            if (actn.type === 'incr') {
+                mdl.counter++;
+            }
+
+            if (actn.type === 'reset') {
+                mdl.counter = 0;
+            }
+
+            if (actn.type === 'click') {
+                mdl.coords = actn.data;
+            }
+
+            return mdl;
+        });
+
+    // Listen for increment button clicks
     events.mouse.click
         .filter((evt) => evt.target.id === 'incr_button')
-        .recv((evt) => action.send(true));
+        .recv((evt) => action.send({ type: 'incr' }));
 
-    // reset button click events
+    // Listen for reset button clicks
     events.mouse.click
         .filter((evt) => evt.target.id === 'reset_button')
-        .recv((evt) => action.send(false));
+        .recv((evt) => action.send({ type: 'reset' }));
 
-    // we return a virtual DOM, built with the `el` helper
-    return update_number.map(function(n) {
-        let incr_btn = el('button', { id: 'incr_button' }, [ "Increment!" ]);
-        let reset_btn = el('button', { id: 'reset_button' }, [ "Reset" ]);
-        let total = el('p', { id: 'total' }, [ 'Clicked ' + n + ' times']);
-        return el('div', { id: 'main' }, [ incr_btn, reset_btn, total ]);
-    });
+    // On any click, anywhere, update the model with the coordinates.
+    events.mouse.click
+        .recv((evt) => action.send({
+            type: 'click',
+            data: {
+                x: evt.clientX,
+                y: evt.clientY
+            }
+        }));
+
+    // Update the page title
+    model.map((mdl) => mdl.counter).connect(page_title);
+
+    return model.map((mdl) =>
+        el('div', { id: 'main' }, [
+            el('button', { id: 'incr_button' }, [ "Increment!" ]),
+            el('button', { id: 'reset_button' }, [ "Reset" ]),
+            el('p', { id: 'total' }, [ 'Clicked ' + mdl.counter + ' times']),
+            el('p', { id: 'coords' }, [ 'Mouse coords: ('+
+                mdl.coords.x + ',' + mdl.coords.y + ').'])
+        ])
+    );
 })
 
 .start(); // And away we go ~~~
