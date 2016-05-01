@@ -23,9 +23,13 @@ var app = App.init({domRoot: 'view'})
     let events = alm.events,
         el     = alm.el;
 
+    // Mailboxes are signals you can send values to
     let action = alm.mailbox({type: 'noop'});
+
+    // Ports are signals going into or out of the app
     let page_title = alm.port.outbound('title');
 
+    // State is elegantly managed as a signal reduction
     let model = action.signal
         .reduce({ counter: 0, coords: { x: 0, y: 0 } },
         function(actn, mdl) {
