@@ -818,8 +818,6 @@ App.init = function(_cfg) {
         notify: notify
     });
 
-    const utils = {};
-
     // The final runtime object
     return save({
         gui: cfg.gui,
@@ -837,7 +835,7 @@ App.init = function(_cfg) {
         port: port,
         vdom: vdom,
         ports: ports,
-        utils: {} // extensions
+        scope: {} // Variable scope visible only inside the application
     });
 };
 
@@ -883,7 +881,7 @@ App.prototype = {
                 byId: runtime.byId,
                 mailbox: runtime.mailbox,
                 port: runtime.port,
-                utils: runtime.utils,
+                scope: runtime.scope,
                 el: runtime.vdom.el,
                 timer: runtime.timer
             };
@@ -899,7 +897,7 @@ App.prototype = {
         var runtime = this.runApp().runtime;
         return {
             ports: runtime.ports,
-            utils: runtime.utils
+            scope: runtime.scope
         };
     }
 };

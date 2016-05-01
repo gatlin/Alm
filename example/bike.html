@@ -118,7 +118,7 @@ window.onload = function() {
 App.init('app_container')
 .runtime(function(runtime) {
 
-    runtime.utils.bikedata = new Evaluator('gainRatio', {
+    runtime.scope.bikedata = new Evaluator('gainRatio', {
         // inputs
         wheelRadius: constant(340.0),
         crankLength: constant(175.0),
@@ -134,14 +134,14 @@ App.init('app_container')
     return save(runtime);
 })
 .main(function(alm) {
-    console.log(alm.utils.bikedata);
+    console.log(alm.scope.bikedata);
     let el = alm.el
       , events = alm.events;
 
     let updates = alm.mailbox(null);
 
     let model = updates.signal
-    .reduce(alm.utils.bikedata,
+    .reduce(alm.scope.bikedata,
         (update, bd) => (update)
             ? bd.set(update.field, constant(update.value))
             : bd);

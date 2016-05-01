@@ -47,14 +47,14 @@ var app = App.init('main')
 // for shits / examples, let's modify the runtime on the client side. This is
 // essentially how plugins and extensions would work.
 .runtime(function(runtime) {
-    runtime.utils.initial_model = function() {
+    runtime.scope.initial_model = function() {
         var maybe_saved = window.localStorage.getItem('todos');
         return (maybe_saved === null)
             ? empty_model()
             : JSON.parse(maybe_saved);
     };
 
-    runtime.utils.save_model = (model) =>
+    runtime.scope.save_model = (model) =>
         window.localStorage.setItem('todos',JSON.stringify(model)) ;
 
     return save(runtime);
@@ -70,14 +70,14 @@ var app = App.init('main')
 .main(function(alm) {
     var events = alm.events,
         el     = alm.el,
-        utils  = alm.utils;
+        scope  = alm.scope;
 
     // When an event happens, an action is sent here.
     var actions = alm.mailbox({ type: Actions.NoOp });
 
     // a signal broadcasting updated models
     var model = actions.signal
-        .reduce(utils.initial_model(),
+        .reduce(scope.initial_model(),
         function (action, model) {
             switch (action.type) {
 
@@ -200,7 +200,7 @@ var app = App.init('main')
         }));
 
     // a model listener - saves the model
-    model.recv((model) => utils.save_model(model));
+    model.recv((model) => scope.save_model(model));
 
     // We return a signal which produces virtual DOM trees from models
     return model.map(function(model) {
