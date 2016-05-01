@@ -706,26 +706,36 @@ function modify(f) {
 }
 
 // Initalize the application runtime
-App.init = function(cfg) {
-    let domRoot, eventRoot;
-    if (typeof cfg === 'object') {
-        domRoot = (typeof cfg.domRoot === 'undefined')
+App.init = function(_cfg) {
+    let cfg;
+    if (typeof _cfg === 'undefined') {
+        cfg = {
+            domRoot: document.body,
+            eventRoot: document,
+            gui: true
+        };
+    } else
+    if (typeof _cfg === 'string') {
+        cfg = {
+            domRoot: document.getElementById(_cfg),
+            eventRoot: document.getElementById(_cfg),
+            gui: true
+        };
+    } else
+    if (typeof _cfg === 'object') {
+        cfg = _cfg;
+        cfg.domRoot = (typeof _cfg.domRoot === 'undefined')
             ? document.body
             : document.getElementById(cfg.domRoot);
-        eventRoot = (typeof cfg.eventRoot === 'undefined')
+        cfg.eventRoot = (typeof _cfg.eventRoot === 'undefined')
             ? document
             : document.getElementById(cfg.eventRoot);
-    } else
-    if (typeof cfg === 'string') {
-        domRoot = eventRoot = document.getElementById(cfg);
+        cfg.gui = (typeof _cfg.gui === 'undefined')
+            ? true
+            : _cfg.gui;
     } else {
-        doomRoot = eventRoot = document.body;
+        throw new Exception('Invalid configuration value!');
     }
-
-    console.log('domRoot');
-    console.log(domRoot);
-    console.log('eventRoot');
-    console.log(eventRoot);
 
     var listeners = [];
     var inputs = [];
@@ -744,8 +754,6 @@ App.init = function(cfg) {
     }
 
     function addListener(whichInputs, dom, evtName, fn) {
-        console.log('***');
-        console.log(dom);
         dom.addEventListener(evtName, fn, true);
         var listener = {
             whichInputs: inputs,
@@ -788,16 +796,24 @@ App.init = function(cfg) {
     // Initialize the mailbox system
     let mailbox = setupMailboxes({ addInput: addInput, async: async, notify: notify });
 
-    // Set up the virtual dom
-    let vdom = setupVdom({ byId: byId, domRoot: domRoot, mailbox: mailbox });
+    // Set up the virtual dom, if this is a GUI application
+    let vdom = null;
+    if (cfg.gui) {
+        vdom = setupVdom({ byId: byId, domRoot: cfg.domRoot, mailbox: mailbox });
+    }
 
     // Set up ports (inbound and outbound constructors)
-    let port = setupPorts({ addInput: addInput, ports: ports, notify: notify, mailbox: mailbox });
+    let port = setupPorts({
+        addInput: addInput,
+        ports: ports,
+        notify: notify,
+        mailbox: mailbox
+    });
 
     // Initialize top-level event signals
     let events = setupEvents({
         addInput: addInput,
-        eventRoot: eventRoot,
+        eventRoot: cfg.eventRoot,
         addListener: addListener,
         notify: notify
     });
@@ -806,8 +822,9 @@ App.init = function(cfg) {
 
     // The final runtime object
     return save({
-        domRoot: domRoot,
-        eventRoot: eventRoot,
+        gui: cfg.gui,
+        domRoot: cfg.domRoot,
+        eventRoot: cfg.eventRoot,
         timer: timer,
         addInput: addInput,
         addListener: addListener,
@@ -871,7 +888,9 @@ App.prototype = {
                 timer: runtime.timer
             };
             let view = k(alm);
-            runtime.vdom.render(view);
+            if (runtime.gui) {
+                runtime.vdom.render(view);
+            }
             return save(alm);
         });
     },
