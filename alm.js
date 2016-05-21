@@ -756,7 +756,7 @@ App.init = function(_cfg) {
     function addListener(whichInputs, dom, evtName, fn) {
         dom.addEventListener(evtName, fn, true);
         let listener = {
-            whichInputs: inputs,
+            whichInputs: whichInputs,
             dom: dom,
             evtName: evtName,
             fn: fn
@@ -771,9 +771,7 @@ App.init = function(_cfg) {
         }
         updating = true;
         let timestamp = timer.now();
-        if (typeof inputs[inputId] !== 'undefined') {
-            inputs[inputId].send(timestamp, v);
-        }
+        inputs[inputId].send(timestamp, v);
         updating = false;
     }
 
@@ -820,21 +818,23 @@ App.init = function(_cfg) {
         notify: notify
     });
 
-    // Function to clear out signals with no receivers after `main`
+    // Function to clear out unused event listeners
     function prune() {
-        for (let l = 0; l < listeners.length; l++) {
+        for (let l = listeners.length - 1; l >= 0; l--) {
             let listener = listeners[l];
+            let unused_count = 0;
             for (let i = 0; i < listener.whichInputs.length; i++) {
                 let inp = listener.whichInputs[i];
-                if (typeof inp === 'undefined') {
-                    continue;
-                }
                 if (0 === inp.receivers.length) {
-                    // I'm a dumb dumb and based the IDs off position in the
-                    // array.
-                    console.log('clearing out input signal ' + i);
-                    delete listener.whichInputs[i];
+                    unused_count++;
                 }
+            }
+
+            // So if all of its receivers are dead ends, remove this listener
+            if (listener.whichInputs.length === unused_count) {
+                cfg.eventRoot
+                    .removeEventListener(listener.evtName, listener.fn);
+                listeners.splice(l,1);
             }
         }
     }
@@ -949,7 +949,6 @@ function setupEvents(runtime) {
 
     function setupEvent(evtName, sig) {
         let sig_id = runtime.addInput(sig);
-        console.log('adding signal ' + sig_id);
         runtime.addListener([sig], runtime.eventRoot, evtName, function(evt) {
             runtime.notify(sig_id, evt);
         });
