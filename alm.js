@@ -771,7 +771,9 @@ App.init = function(_cfg) {
         }
         updating = true;
         let timestamp = timer.now();
-        inputs[inputId].send(timestamp, v);
+        if (typeof inputs[inputId] !== 'undefined') {
+            inputs[inputId].send(timestamp, v);
+        }
         updating = false;
     }
 
@@ -818,6 +820,25 @@ App.init = function(_cfg) {
         notify: notify
     });
 
+    // Function to clear out signals with no receivers after `main`
+    function prune() {
+        for (let l = 0; l < listeners.length; l++) {
+            let listener = listeners[l];
+            for (let i = 0; i < listener.whichInputs.length; i++) {
+                let inp = listener.whichInputs[i];
+                if (typeof inp === 'undefined') {
+                    continue;
+                }
+                if (0 === inp.receivers.length) {
+                    // I'm a dumb dumb and based the IDs off position in the
+                    // array.
+                    console.log('clearing out input signal ' + i);
+                    delete listener.whichInputs[i];
+                }
+            }
+        }
+    }
+
     // The final runtime object
     return save({
         gui: cfg.gui,
@@ -835,6 +856,7 @@ App.init = function(_cfg) {
         port: port,
         vdom: vdom,
         ports: ports,
+        prune: prune,
         scope: {} // Variable scope visible only inside the application
     });
 };
@@ -889,21 +911,7 @@ App.prototype = {
             if (runtime.gui) {
                 runtime.vdom.render(view);
             }
-
-            // Prune unused event listeners
-            for (let l in runtime.listeners) {
-                let inps = l.whichInputs;
-                if (0 === inps.length) {
-                    continue;
-                }
-                for (let i = inps.length - 1; i >= 0; i--) {
-                    let sig = inps[i];
-                    if (0 === sig.receivers.length) {
-                        inps.splice(i,1);
-                    }
-                }
-            }
-
+            runtime.prune();
             return save(alm);
         });
     },
@@ -941,6 +949,7 @@ function setupEvents(runtime) {
 
     function setupEvent(evtName, sig) {
         let sig_id = runtime.addInput(sig);
+        console.log('adding signal ' + sig_id);
         runtime.addListener([sig], runtime.eventRoot, evtName, function(evt) {
             runtime.notify(sig_id, evt);
         });
