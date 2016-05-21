@@ -267,7 +267,7 @@ return module;
  * A simple re-implementation of the Elm runtime and core libraries.
  */
 
-var guid = Public.guid = guid_factory(); // from loeb.js
+let guid = Public.guid = guid_factory(); // from loeb.js
 
 /**
  * Signal
@@ -300,7 +300,7 @@ Signal.constant = function(x) {
 };
 
 Signal.output = function(handler) {
-    var sig = new Signal(function(v) {
+    let sig = new Signal(function(v) {
         handler(v);
     }, []);
     sig.isOutput = true;
@@ -309,10 +309,10 @@ Signal.output = function(handler) {
 
 Signal.prototype = {
     send: function(timestamp, value) {
-        var result = this.fn(value);
+        let result = this.fn(value);
         if (result === undefined) { return; }
         if (this.isOutput) { return; }
-        for (var i = this.receivers.length; i--; ) {
+        for (let i = this.receivers.length; i--; ) {
             this.receivers[i].send(timestamp, result);
         }
     },
@@ -329,8 +329,8 @@ Signal.prototype = {
     },
     // signal transformers
     filter: function(cond) {
-        var sig = this;
-        var r = new Signal(function(v) {
+        let sig = this;
+        let r = new Signal(function(v) {
             if (cond(v)) {
                 return v;
             }
@@ -339,9 +339,9 @@ Signal.prototype = {
         return r;
     },
     reduce: function(initial, reducer) {
-        var sig = this;
+        let sig = this;
         let state = initial;
-        var r = new Signal(function(v) {
+        let r = new Signal(function(v) {
             state = reducer(v, state);
             return state;
         });
@@ -349,8 +349,8 @@ Signal.prototype = {
         return r;
     },
     map: function(f) {
-        var sig = this;
-        var r = new Signal(function(v) {
+        let sig = this;
+        let r = new Signal(function(v) {
             return f(v);
         });
         this.connect(r);
@@ -358,7 +358,7 @@ Signal.prototype = {
     },
     // an idiomatic way of tapping the output of a stream.
     recv: function(f) {
-        var s = new Signal.output(f);
+        let s = new Signal.output(f);
         this.connect(s);
         return s;
     },
@@ -415,7 +415,7 @@ function setupMailboxes(runtime) {
  * This function initializes the port constructors for a given runtime.
  */
 function setupPorts(runtime) {
-    var inbound = function(name) {
+    let inbound = function(name) {
         let signal = Signal.make();
         let sig_id = runtime.addInput(signal);
         runtime.ports[name] = {
@@ -426,7 +426,7 @@ function setupPorts(runtime) {
         return signal;
     };
 
-    var outbound = function(name) {
+    let outbound = function(name) {
         let signal = Signal.make();
         runtime.ports[name] = {
             listen: function(k) {
@@ -449,7 +449,7 @@ function setupPorts(runtime) {
  * and manipulation of HTML elements.
  */
 function setupVdom(alm) {
-    var vdom = {};
+    let vdom = {};
 
     /* A virtual DOM is a rose tree. */
     function VTree(content, children, type) {
@@ -473,7 +473,7 @@ function setupVdom(alm) {
             return this;
         },
         keyEq: function(other) {
-            var me = this;
+            let me = this;
             if (me.key == null || other.key == null) {
                 return false;
             }
@@ -488,7 +488,7 @@ function setupVdom(alm) {
      * Convenience constructor for VTree.
      */
     vdom.el = function(tag, attrs, children) {
-        var children_trees = (typeof children === 'undefined')
+        let children_trees = (typeof children === 'undefined')
             ? []
             : children.map(function(kid) {
                 return (typeof kid === 'string')
@@ -505,13 +505,13 @@ function setupVdom(alm) {
         if (tree.type === VTree.Text) {
             return document.createTextNode(tree.content);
         }
-        var el = document.createElement(tree.content.tag);
+        let el = document.createElement(tree.content.tag);
 
-        for (var key in tree.content.attrs) {
+        for (let key in tree.content.attrs) {
             el.setAttribute(key, tree.content.attrs[key]);
         }
-        for (var i = 0; i < tree.children.length; i++) {
-            var child = makeDOMNode(tree.children[i]);
+        for (let i = 0; i < tree.children.length; i++) {
+            let child = makeDOMNode(tree.children[i]);
             el.appendChild(child);
         }
         if (tree.mailbox) {
@@ -521,8 +521,8 @@ function setupVdom(alm) {
     }
 
     function initialDOM(tree) {
-        var root = alm.domRoot;
-        var domTree = makeDOMNode(tree);
+        let root = alm.domRoot;
+        let domTree = makeDOMNode(tree);
         while (root.firstChild) {
             root.removeChild(root.firstChild);
         }
@@ -530,9 +530,9 @@ function setupVdom(alm) {
     }
 
     function makeIndex(tree) {
-        var index = {};
-        for (var i = 0; i < tree.children.length; i++) {
-            var kid = tree.children[i];
+        let index = {};
+        for (let i = 0; i < tree.children.length; i++) {
+            let kid = tree.children[i];
             if (kid.key != null) {
                 index[kid.key] = i;
             }
@@ -563,22 +563,22 @@ function setupVdom(alm) {
             if (a.type === VTree.Node) {
                 if (a.content.tag === b.content.tag) {
                     // reconcile element attributes
-                    for (var attr in b.content.attrs) {
+                    for (let attr in b.content.attrs) {
                         dom[attr] = b.content.attrs[attr];
                         dom.setAttribute(attr,b.content.attrs[attr]);
                     }
-                    for (var attr in a.content.attrs) {
+                    for (let attr in a.content.attrs) {
                         if (!(attr in b.content.attrs)) {
                             dom.removeAttribute(attr);
                         }
                     }
 
                     // Naively compare children. Works but is un-optimized.
-                    var aLen = a.children.length;
-                    var bLen = b.children.length;
-                    var len = aLen > bLen ? aLen : bLen;
+                    let aLen = a.children.length;
+                    let bLen = b.children.length;
+                    let len = aLen > bLen ? aLen : bLen;
                     let kids = new Array();
-                    for (var i = 0; i < len; i++) {
+                    for (let i = 0; i < len; i++) {
                         kids.push(dom.childNodes[i]);
                     }
 
@@ -593,19 +593,19 @@ function setupVdom(alm) {
                     }
                 } else {
                     // tags are not the same
-                    var p = dom.parentNode;
+                    let p = dom.parentNode;
                     p.insertBefore(makeDOMNode(b), dom);
                     p.removeChild(dom);
                 }
             } else {
                 // b is a node, a is text
-                var p = dom.parentNode;
+                let p = dom.parentNode;
                 p.insertBefore(makeDOMNode(b), dom);
                 p.removeChild(dom);
             }
         } else {
             // both are text
-            var p = dom.parentNode;
+            let p = dom.parentNode;
             p.insertBefore(makeDOMNode(b), dom);
             p.removeChild(dom);
         }
@@ -629,7 +629,7 @@ function setupVdom(alm) {
      */
     vdom.render = function(view_signal) {
         view_signal.reduce(null,function(update, tree) {
-            var root = alm.domRoot;
+            let root = alm.domRoot;
             // Construct a new tree and save it
             if (tree === null) {
                 initialDOM(update);
@@ -660,7 +660,7 @@ function App(runApp) {
 Public.App = App;
 
 App.of = function(v) {
-    var value = (typeof v !== 'undefined')
+    let value = (typeof v !== 'undefined')
         ? v
         : null;
     return new App(function(runtime) {
@@ -700,7 +700,7 @@ Public.save = save;
 
 function modify(f) {
     return runtime().then(function(runtime) {
-        var newruntime = f(runtime);
+        let newruntime = f(runtime);
         return save(newruntime);
     });
 }
@@ -737,9 +737,9 @@ App.init = function(_cfg) {
         throw new Exception('Invalid configuration value!');
     }
 
-    var listeners = [];
-    var inputs = [];
-    var ports = {};
+    let listeners = [];
+    let inputs = [];
+    let ports = {};
     const timer = {
         programStart: Date.now(),
         now: function() { return Date.now(); }
@@ -755,7 +755,7 @@ App.init = function(_cfg) {
 
     function addListener(whichInputs, dom, evtName, fn) {
         dom.addEventListener(evtName, fn, true);
-        var listener = {
+        let listener = {
             whichInputs: inputs,
             dom: dom,
             evtName: evtName,
@@ -764,19 +764,19 @@ App.init = function(_cfg) {
         listeners.push(listener);
     }
 
-    var updating = false;
+    let updating = false;
     function notify (inputId, v) {
         if (updating) {
             throw new Error("Update already in progress!");
         }
         updating = true;
-        var timestamp = timer.now();
+        let timestamp = timer.now();
         inputs[inputId].send(timestamp, v);
         updating = false;
     }
 
     function addInput(inp) {
-        var _id = inputs.length;
+        let _id = inputs.length;
         inputs.push(inp);
         return _id;
     }
@@ -843,7 +843,7 @@ App.prototype = {
     map: function(f) {
         let me = this;
         return new App(function(runtime) {
-            var prev = me.runApp(runtime);
+            let prev = me.runApp(runtime);
             return {
                 value: f(prev.value),
                 runtime: prev.runtime
@@ -889,12 +889,27 @@ App.prototype = {
             if (runtime.gui) {
                 runtime.vdom.render(view);
             }
+
+            // Prune unused event listeners
+            for (let l in runtime.listeners) {
+                let inps = l.whichInputs;
+                if (0 === inps.length) {
+                    continue;
+                }
+                for (let i = inps.length - 1; i >= 0; i--) {
+                    let sig = inps[i];
+                    if (0 === sig.receivers.length) {
+                        inps.splice(i,1);
+                    }
+                }
+            }
+
             return save(alm);
         });
     },
 
     start: function() {
-        var runtime = this.runApp().runtime;
+        let runtime = this.runApp().runtime;
         return {
             ports: runtime.ports,
             scope: runtime.scope
@@ -907,7 +922,7 @@ instance(App,Monad);
 
 // Setup events for the core browser events
 function setupEvents(runtime) {
-    var events = {
+    let events = {
         mouse: {
             click: Signal.make(),
             dblclick: Signal.make()
@@ -925,7 +940,7 @@ function setupEvents(runtime) {
     };
 
     function setupEvent(evtName, sig) {
-        var sig_id = runtime.addInput(sig);
+        let sig_id = runtime.addInput(sig);
         runtime.addListener([sig], runtime.eventRoot, evtName, function(evt) {
             runtime.notify(sig_id, evt);
         });
