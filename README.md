@@ -142,92 +142,245 @@ papers. If you want theory, I can't recommend them enough. Alm is partly my
 desire to learn more about FRP, and partly to make Elm's power available in
 plain old ECMAScript.
 
-The following is a high-level overview of the major parts of Alm.
+Let's walk through the highlights. It may be helpful to refer back to the
+synopsis above occasionally.
 
-### Signals
+### Initialization
 
-The core of Alm is the *Signal*. Signals are best thought of as time-varying
-values. You may use the Signal methods to map, reduce, and filter Signals,
-which in turn produce new Signals.
+```javascript
+var app = App.init('some-id')
+```
 
-When a Signal's value updates all Signals defined in terms of it will also
-update. In this way Signals form the basis of all message dispatching in Alm.
+An `App` is part of your document which *reacts* to events and possibly
+*renders* a view. These are confined to the *event root* and *DOM root*,
+respectively. The above example says "I want to listen to all events which
+occur within the element with id `some-id` and I will render a view there as
+well."
 
-You may also connect two unrelated Signals using the `.connect` method, which
-is useful especially with *mailboxes* and *ports* (see below).
+There are others:
 
-Signals form the backbone of most of the other features.
+```javascript
+var app = App.init()
+```
 
-### App
+This sets the event root and DOM root to `document.body`.
 
-An *App* is a representation of the runtime data and scope for a given Alm
-application. An App is initialized with an optional HTML element to bind to for
-event capture and DOM manipulation, and presents a few methods for setting up
-the application runtime before starting.
+```javascript
+var app = App.init({ domRoot: 'element-a', eventRoot: 'element-b' })
+```
 
-The `runtime` method is just that - it provides access to the full hidden
-runtime object so that any utilities or extensions to Alm's default
-capabilities may be defined. `runtime` expects a handler function which is
-given this object.
+This sets the DOM root to `element-a` and the event root to `element-b`. If you
+omit either, they default to `document.body`.
 
-The `main` method presents a limited subset of the runtime. It is here that you
-define your Signal graph and compose the flow of data through your application.
-`main` expects you to return a Signal of *virtual DOM* objects (see below).
+If your application won't be rendering a view, you can do the following:
 
-The `init` method takes an optional String ID of an HTML element to bind to. If
-this is not provided then the App will simply bind itself to `document.body`.
-This allows multiple Apps to be present on the same page. All browser events
-which occur within this scope are gathered at the top level and made available
-as Signals, and the DOM within this scope is managed entirely by the App.
+```javascript
+var app = App.init({ gui: false })
+```
 
-Finally the `start` method is how you actually kick off the application. It
-returns an object with various runtime data, notably *ports* (see below) so
-that they can be used elsewhere in the page.
+### Runtime setup
 
-App is useful because the runtime is not a property which can be accessed or
-manipulated without using the `runtime` or `main` methods, and the latter only
-in a limited way. It is set up to take advantage of efficiencies afforded by
-`Object.freeze`, though at this early stage of development this is most likely
-not optimal yet.
+Next comes
 
-### Virtual DOM
+```javascript
+.runtime(function(runtime) {
+    runtime.scope.foo = 'bar';
+    // ...
+    return save(runtime);
+})
+```
 
-Using the `el` helper provided in the runtime, you can programmatically define
-your interface. `App.main` expects a Signal of virtual DOM objects, which means
-that you can refresh your user interface declaratively. Behind the scenes Alm
-is able to relatively-efficiently compute the difference between the old DOM
-and the new one and avoid destroying and recreating elements more than it has
-to.
+`App` is designed to keep the internal runtime state closed off to the outside
+world. It is not a property of the object that can be publicly accessed. It's
+complicated. But the `runtime()` method is how you can access it. Reasons why
+you might want to do that:
 
-As a result, inputs which are focused stay focused on updates.
+- To add new types of events
+- To modify `runtime.scope`, which is where you can put arbitrary data you
+  might need, or utility functions.
+- A more industrious person could potentially build an extension or plugin
+  system on top of this.
 
-`el` takes three arguments: a String HTML tag; an object of attributes; and an
-optional Array of child DOM elements, which may be calls to `el` or String
-literals for text values.
+The `save()` function is, admittedly, unnecessary right now. However I have
+plans to make this be where the runtime becomes completely frozen for
+performance reasons and I consider it good form to follow this custom.
 
-Additionally, the object created by `el` has a method `subscribe`. If you give
-`subscribe` a *mailbox* (see below) then every time the DOM node is re-rendered
-the mailbox will receive the node and can make use of it.
+### The Main Event
 
-### Mailboxes
+Once the runtime is set up properly, we have this:
 
-A *mailbox* is essentially a Signal to which you may send values. The `mailbox`
-function in the Alm runtime requires a default value which is emitted when the
-application starts up. Mailboxes have `.signal` properties which may be used to
-build other Signals.
+```javascript
+.main(function(alm) {
+    // !!!
+})
+```
 
-In other words, mailboxes are Signals which emit *at least* one value and which
-you may send more values to emit.
+You can obviously call `alm` whatever you want. This is a subset of the
+application runtime. Here is its actual definition in the code:
 
-### Ports
+```javascript
+let alm = {
+    events: runtime.events,
+    async: runtime.async,
+    setTimeout: runtime.setTimeout,
+    byId: runtime.byId,
+    mailbox: runtime.mailbox,
+    port: runtime.port,
+    scope: runtime.scope,
+    el: runtime.vdom.el,
+    timer: runtime.timer
+};
+```
 
-A *port* is a way to interface with the surrounding JavaScript environment;
-after all, it is highly unlikely in a complex application that you won't be
-using other libraries for important things.
+Here's the good stuff. `main()` gives you access to your private runtime data
+and expects you to return a *Signal* of *Views*. Let's break this down.
 
-Ports are basically signals which either allow you to send values *out* of the
-application or receive values coming *into* the application. The example app in
-the synopsis illustrates this.
+#### Signal
+
+A `Signal` is a value which may update at any time. `Signal`s listen to
+upstream values from other `Signal`s, do something with them, and then
+broadcast them to 0 or more receiving `Signal`s.
+
+All message passing and event handling is done through `Signal`s. You can
+simply take an existing one and call its `filter/map/reduce`, etc methods or
+you can connect two signals with `.connect`:
+
+```javascript
+let sigB = sigA.map(foo);
+sigB.connect(sigC);
+sigB.connect(sigD);
+```
+
+`Signal`s are defined for a default set of browser events. Example:
+
+```javascript
+events.mouse.click
+    .filter((evt) => evt.target.id === 'btn-1')
+    .map((evt) => evt.target.value)
+    .recv((value) => somewhere.send(value));
+```
+
+No need to assign anything. This statement will now funnel mouse click events
+for a specific button to a `Mailbox` called `somewhere`. Wait, what's a
+
+#### Mailbox
+
+A `Mailbox` is essentially a named `Signal` to which you may send values at any
+time. `Mailbox`es must be defined with a default value.
+
+`Mailbox`es are created with `alm.mailbox` and require a default parameter.
+You can subscribe to a mailbox by accessing its `.signal` property.
+
+#### Views
+
+I said earlier that `main` must return a `Signal` of `View`s (unless your app
+is initialized with `gui: false`). You create `View`s using the `alm.el`
+helper. `el` takes three arguments:
+
+- String name of tag
+- Dictionary of element attributes
+- (Optional) Array of either child views or text.
+
+That's right: you "recreate" the whole view each time. However, this is fairly
+cheap: the only thing you recreate each time is this nested JavaScript object.
+Alm will compare the previous tree to the current tree, compute a diff, and
+only tell the browser to redraw what is necessary. In practice this is
+efficient.
+
+If you want to be notified when an element is redrawn, you can use
+`.subscribe` and give it a mailbox. Example:
+
+```javascript
+el('p', { 'class':'small' }, [ 'This is some text hi' ]).subscribe(mbox)
+```
+
+Each time the element is recreated the `HTMLElement` will be sent to the
+specified mailbox.
+
+#### State
+
+Alm doesn't aim to be too ideological about this topic, but rather to encourage
+good habits. There is a special method on `Signal` called `.reduce`. It takes
+two arguments:
+
+- An initial state value; and
+- A callback which should expect two arguments: a signal value, and the old
+  state.
+
+The name `reduce` comes from the fact that it's like JavaScript's
+`Array.reduce`: it allows you to reduce values into an aggregate result.
+
+It just so happens this is a great way to manage your model. Example from the
+synopsis:
+
+```javascript
+let updates = alm.mailbox({ type: 'noop' });
+let model = updates.signal
+    .reduce({ counter: 0, coords: { x: 0, y: 0 } },
+    function(actn, mdl) {
+        if (actn.type === 'incr') {
+            mdl.counter++;
+        }
+
+        if (actn.type === 'reset') {
+            mdl.counter = 0;
+        }
+
+        if (actn.type === 'click') {
+            mdl.coords = actn.data;
+        }
+
+        return mdl;
+    });
+```
+
+You can now send updates to `updates` and they will transform the model.
+
+#### Ports
+
+To communicate with code outside your application you can use `Port`s. These
+come in two varieties: inbound and outbound.
+
+You create them with `port.inbound()` and `port.outbound`, both of which take a
+string name. Example usage from within `.main()`:
+
+```javascript
+let incoming = alm.port.inbound('incoming');
+let outgoing = alm.port.outbound('outgoing');
+
+messages_signal.connect(outgoing);
+incoming.recv((msg) => foo.send(msg));
+```
+
+How do we access these on the other side? Glad you asked!
+
+### Wrapping up and starting
+
+The final `App` method you call is `.start()`:
+
+```javascript
+var app = App.init()
+.runtime(function(runtime) {
+    //...
+})
+.main(function(alm) {
+    //...
+})
+.start();
+```
+
+In the above example, `app` is an object containing the `scope` and `ports` you
+defined. To wit:
+
+```javascript
+app.ports['outgoing'].listen(function(msg) {
+    // ...
+});
+
+app.ports['incoming'].send(blah);
+```
+
+That about wraps up the overview.
 
 2. Status
 ---
