@@ -16,7 +16,7 @@ div#view {
 <script>
 window.onload = function() {
 'use strict';
-var app = App.init({domRoot: 'view'})
+const app = App.init({domRoot: 'view'})
 
 .main(function(alm) {
     // save typing ;)
@@ -24,25 +24,25 @@ var app = App.init({domRoot: 'view'})
           el     = alm.el;
 
     // Mailboxes are signals you can send values to
-    let action = alm.mailbox({type: 'noop'});
+    const action = alm.mailbox({type: 'noop'});
 
     // Ports are signals going into or out of the app
-    let page_title = alm.port.outbound('title');
+    const page_title = alm.port.outbound('title');
 
     // State is elegantly managed as a signal reduction
-    let model = action.signal
+    const model = action.signal
         .reduce({ counter: 0, coords: { x: 0, y: 0 } },
-        function(actn, mdl) {
-            if (actn.type === 'incr') {
+        (action, mdl) => {
+            if (action.type === 'incr') {
                 mdl.counter++;
             }
 
-            if (actn.type === 'reset') {
+            if (action.type === 'reset') {
                 mdl.counter = 0;
             }
 
-            if (actn.type === 'click') {
-                mdl.coords = actn.data;
+            if (action.type === 'click') {
+                mdl.coords = action.data;
             }
 
             return mdl;
@@ -86,7 +86,7 @@ var app = App.init({domRoot: 'view'})
 
 // Update the page title using the port
 app.ports['title'].listen(function(n) {
-    let base = 'Alm Example';
+    const base = 'Alm Example';
     if (n > 0) {
         document.title = '('+n+') ' + base;
     } else {

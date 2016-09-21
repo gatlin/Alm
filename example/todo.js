@@ -29,29 +29,107 @@ function empty_model() {
  * Poor man's enum. These are the types of actions we will be performing on the
  * model.
  */
-var Actions = {
-    NoOp: 0,
-    Add: 1,
-    UpdateField: 2,
-    Delete: 3,
-    Complete: 4,
-    Editing: 5,
-    UpdateTask: 6
+const Actions = {
+    NoOp: 'NoOp',
+    Add: 'Add',
+    UpdateField: 'UpdateField',
+    Delete: 'Delete',
+    Complete: 'Complete',
+    Editing: 'Editing',
+    UpdateTask: 'UpdateTask'
 };
 
-var guid = guid_factory();
+const guid = guid_factory();
 
 // Set up the application runtime state
-var app = App.init('main')
+const app = App.init('main')
 
 // for shits / examples, let's modify the runtime on the client side. This is
 // essentially how plugins and extensions would work.
 .runtime(function(runtime) {
     runtime.scope.initial_model = function() {
-        var maybe_saved = window.localStorage.getItem('todos');
+        const maybe_saved = window.localStorage.getItem('todos');
         return (maybe_saved === null)
             ? empty_model()
             : JSON.parse(maybe_saved);
+    };
+
+    // Updates the model.
+    // Input: an action and an old model.
+    // Output: a new model.
+    runtime.scope.update = (action, model) => {
+        const dispatch = {
+            'NoOp': () => {
+                return model;
+            },
+
+            'Add': () => {
+                if (model.field) {
+                    model.tasks.push(new_task(
+                        model.field, model.uid
+                    ));
+                    model.uid = model.uid + 1;
+                    model.field = '';
+                }
+                return model;
+            },
+
+            'UpdateField': () => {
+                model.field = action.content;
+                return model;
+            },
+            'Delete': () => {
+                const uid = action.content;
+                let idx = -1;
+                for (let i = 0; i < model.tasks.length; i++) {
+                    if (model.tasks[i].uid === uid) {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx > -1) {
+                    model.tasks.splice(idx,1);
+                }
+                return model;
+            },
+
+            'Complete': () => {
+                const uid = action.content;
+                for (let i = model.tasks.length; i--; ) {
+                    if (model.tasks[i].uid === uid) {
+                        model.tasks[i].completed =
+                            !model.tasks[i].completed;
+                        break;
+                    }
+                }
+                return model;
+            },
+
+            'Editing': () => {
+                const uid = action.content;
+                for (let i = model.tasks.length; i--; ) {
+                    if (model.tasks[i].uid === uid) {
+                        model.tasks[i].editing = true;
+                        break;
+                    }
+                }
+                return model;
+            },
+
+            'UpdateTask': () => {
+                const uid = action.content.uid;
+                for (let i = model.tasks.length; i--; ) {
+                    if (model.tasks[i].uid === uid) {
+                        model.tasks[i].editing = false;
+                        model.tasks[i].description =
+                            action.content.text;
+                        break;
+                    }
+                }
+                return model;
+            }
+        };
+        return dispatch[action.type]();
     };
 
     runtime.scope.save_model = (model) =>
@@ -68,80 +146,17 @@ var app = App.init('main')
  * rendered by the runtime as new trees are produced.
  */
 .main(function(alm) {
-    var events = alm.events,
-        el     = alm.el,
-        scope  = alm.scope;
+    const events = alm.events,
+        el     = alm.el;
+    let scope  = alm.scope;
 
     // When an event happens, an action is sent here.
-    var actions = alm.mailbox({ type: Actions.NoOp });
+    const actions = alm.mailbox({ type: Actions.NoOp });
 
     // a signal broadcasting updated models
-    var model = actions.signal
-        .reduce(scope.initial_model(),
-        function (action, model) {
-            switch (action.type) {
-
-                case Actions.Add:
-                    if (model.field) {
-                        model.tasks.push(new_task(model.field, model.uid));
-                        model.uid = model.uid + 1;
-                        model.field = "";
-                    }
-                    return model;
-
-                case Actions.UpdateField:
-                    model.field = action.content;
-                    return model;
-
-                case Actions.Delete:
-                    var uid = action.content;
-                    var idx = -1;
-                    for (var i = 0; i < model.tasks.length; i++) {
-                        if (model.tasks[i].uid === uid) {
-                            idx = i;
-                            break;
-                        }
-                    }
-                    if (idx > -1) {
-                        model.tasks.splice(idx, 1);
-                    }
-                    return model;
-
-                case Actions.Complete:
-                    var uid = action.content;
-                    for (var i = model.tasks.length; i--; ) {
-                        if (model.tasks[i].uid === uid) {
-                            model.tasks[i].completed = !model.tasks[i].completed;
-                            break;
-                        }
-                    }
-                    return model;
-
-                case Actions.Editing:
-                    var uid = action.content;
-                    for (var i = model.tasks.length; i--; ) {
-                        if (model.tasks[i].uid === uid) {
-                            model.tasks[i].editing = true;
-                            break;
-                        }
-                    }
-                    return model;
-
-                // Editing is finished
-                case Actions.UpdateTask:
-                    var uid = action.content.uid;
-                    for (var i = model.tasks.length; i--; ) {
-                        if (model.tasks[i].uid === uid) {
-                            model.tasks[i].editing = false;
-                            model.tasks[i].description = action.content.text;
-                            break;
-                        }
-                    }
-                    return model;
-            }
-
-            return model;
-        });
+    const model = actions
+        .signal
+        .reduce(scope.initial_model(), scope.update);
 
     events.change
         .filter((evt) => evt.target.className === 'toggle')
@@ -204,8 +219,8 @@ var app = App.init('main')
 
     // We return a signal which produces virtual DOM trees from models
     return model.map(function(model) {
-        var task_items = model.tasks.map(function(task) {
-            var content = (task.editing)
+        let task_items = model.tasks.map(function(task) {
+            let content = (task.editing)
                 ? el('input', {
                     type: 'text',
                     class: 'editing',
@@ -216,7 +231,7 @@ var app = App.init('main')
                     id: 'text-task-'+task.uid
                 }, [task.description]);
 
-            var checkboxAttrs = {
+            let checkboxAttrs = {
                 type: 'checkbox',
                 class: 'toggle',
                 id: 'check-task-'+task.uid

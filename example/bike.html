@@ -136,12 +136,12 @@ App.init('app_container')
 })
 .main(function(alm) {
     console.log(alm.scope.bikedata);
-    let el = alm.el
-      , events = alm.events;
+    const el = alm.el
+        , events = alm.events;
 
-    let updates = alm.mailbox(null);
+    const updates = alm.mailbox(null);
 
-    let model = updates.signal
+    const model = updates.signal
     .reduce(alm.scope.bikedata,
         (update, bd) => (update)
             ? bd.set(update.field, constant(update.value))
@@ -156,9 +156,9 @@ App.init('app_container')
         }));
 
     return model.map(function(bd) {
-        let data = bd.evaluate();
+        const data = bd.evaluate();
 
-        let fields = {
+        const fields = {
             'wheelRadius': 'Wheel radius (mm)',
             'crankLength': 'Crank length (mm)',
             'teethFront': 'Number of front gear teeth',
