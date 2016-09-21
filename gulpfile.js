@@ -30,7 +30,7 @@ function build() {
         .pipe(source('alm.js'))
         .pipe(buffer())
         .pipe(uglify({
-            mangle: false
+            mangle: true
         }))
         .pipe(gulp.dest('dist'));
 }
