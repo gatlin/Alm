@@ -164,7 +164,7 @@ Signal.make = function() {
 };
 
 Signal.constant = function(x) {
-    return new Signal(constant(x));
+    return new Signal((_) => x);
 };
 
 Signal.output = function(handler) {
@@ -759,6 +759,13 @@ App.prototype = {
             });
         })
         .then(k);
+    },
+
+    // Like runtime but you don't have to call `save` at the end
+    setup: function(k) {
+        return this.runtime((rt) => {
+            return save(k(rt));
+        });
     },
 
     // The main procedure in which you can create signals and mailboxes

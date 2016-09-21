@@ -117,7 +117,7 @@ window.onload = function() {
 'use strict';
 
 App.init('app_container')
-.runtime(function(runtime) {
+.setup(function(runtime) {
 
     runtime.scope.bikedata = new Evaluator('gainRatio', {
         // inputs
@@ -132,7 +132,7 @@ App.init('app_container')
         gainRatio: (bd) => bd.at('gearRatio') * bd.at('radiusRatio')
     });
 
-    return save(runtime);
+     return runtime;
 })
 .main(function(alm) {
     console.log(alm.scope.bikedata);

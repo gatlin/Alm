@@ -46,7 +46,7 @@ const app = App.init('main')
 
 // for shits / examples, let's modify the runtime on the client side. This is
 // essentially how plugins and extensions would work.
-.runtime(function(runtime) {
+.setup((runtime) => {
     runtime.scope.initial_model = function() {
         const maybe_saved = window.localStorage.getItem('todos');
         return (maybe_saved === null)
@@ -135,7 +135,7 @@ const app = App.init('main')
     runtime.scope.save_model = (model) =>
         window.localStorage.setItem('todos',JSON.stringify(model)) ;
 
-    return save(runtime);
+    return runtime;
 })
 
 /* Now we wire our signals together.
