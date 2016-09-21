@@ -1,18 +1,27 @@
 {
-    "name":"alm",
-    "version":"0.0.1",
-    "homepage": "https://github.com/gatlin/Alm",
-    "description": "A functional reactive JavaScript GUI library",
-    "main": "alm.js",
-    "license": "GPL-3",
-    "files": [ "lib" ],
-    "devDependencies": {
-        "gulp": "3.9.x",
-        "gulp-serve": "1.2.x",
-        "gulp-concat": "2.6.X"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/gatlin/alm.git"
-    }
+  "name": "alm",
+  "version": "0.0.1",
+  "homepage": "https://github.com/gatlin/Alm",
+  "description": "A functional reactive JavaScript GUI library",
+  "main": "alm.js",
+  "license": "GPL-3",
+  "files": [
+    "lib"
+  ],
+  "devDependencies": {
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-preset-es2015": "^6.14.0",
+    "babelify": "^7.3.0",
+    "browserify": "^13.1.0",
+    "gulp": "3.9.x",
+    "gulp-babel": "^6.1.2",
+    "gulp-serve": "1.2.x",
+    "gulp-uglify": "^2.0.0",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gatlin/alm.git"
+  }
 }

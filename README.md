@@ -407,11 +407,6 @@ Once you have the prerequisites you can build `alm` like so:
     $> npm install
     $> gulp make
 
-If you want to build `alm` with some extra stuff (from `lib/loeb_extra.js`) then
-you can instead run
-
-    $> gulp make-extra
-
 What's with this `loeb.js` stuff ?
 ---
 
@@ -432,7 +427,7 @@ keep it separate. There are two files:
 
 - `loeb.js` contains stuff required for Alm. It is used in `gulp make`.
 - `loeb_extra.js` contains stuff I find interesting (perhaps even useful!) but
-  not necessary to build Alm. It is included if you build with `gulp make-extra`.
+  not necessary to build Alm.
 
 The `bikemath` example uses stuff from `loeb_extra.js`, if you're curious.
 

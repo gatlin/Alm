@@ -39,8 +39,6 @@ const Actions = {
     UpdateTask: 'UpdateTask'
 };
 
-const guid = guid_factory();
-
 // Set up the application runtime state
 const app = App.init('main')
 
