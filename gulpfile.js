@@ -7,12 +7,12 @@ gulp.task('serve', serve('./'));
 gulp.task('make', function() {
     return gulp.src(['./lib/loeb.js', './lib/alm.js'])
         .pipe(concat('alm.js'))
-        .pipe(gulp.dest('./'));
+        .pipe(gulp.dest('./dist'));
 });
 
 gulp.task('make-extra', function() {
     return gulp.src(['./lib/loeb.js', './lib/loeb_extra.js',
                      './lib/alm.js'])
-               .pipe(concat('alm.js'))
-               .pipe(gulp.dest('./'));
+               .pipe(concat('alm-extra.js'))
+               .pipe(gulp.dest('./dist'));
 });
