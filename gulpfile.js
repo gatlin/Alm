@@ -4,9 +4,15 @@ var gulp = require('gulp')
 
 gulp.task('serve', serve('./'));
 
-gulp.task('scripts', function() {
+gulp.task('make', function() {
     return gulp.src(['./lib/loeb.js', './lib/alm.js'])
         .pipe(concat('alm.js'))
         .pipe(gulp.dest('./'));
 });
 
+gulp.task('make-extra', function() {
+    return gulp.src(['./lib/loeb.js', './lib/loeb_extra.js',
+                     './lib/alm.js'])
+               .pipe(concat('alm.js'))
+               .pipe(gulp.dest('./'));
+});
