@@ -201,9 +201,8 @@ you might want to do that:
 - A more industrious person could potentially build an extension or plugin
   system on top of this.
 
-The `save()` function is, admittedly, unnecessary right now. However I have
-plans to make this be where the runtime becomes completely frozen for
-performance reasons and I consider it good form to follow this custom.
+The `save()` function is necessary to update the runtime state, which is frozen
+for potential performance benefits.
 
 ### The Main Event
 
