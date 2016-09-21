@@ -394,7 +394,7 @@ author would greatly appreciate any feedback or commentary!
 Building and using
 ---
 
-This repository already contains a pre-built, non-minified file you can use at
+This repository already contains a pre-built, minified file you can use at
 `dist/alm.js`. However if you need to rebuild it for whatever reason then read
 on.
 
