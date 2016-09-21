@@ -12,7 +12,7 @@ div#view {
 </head>
 <body>
     <div id='view'></div>
-<script src='../alm.js'></script>
+<script src='../dist/alm.js'></script>
 <script>
 window.onload = function() {
 'use strict';
@@ -20,8 +20,8 @@ var app = App.init({domRoot: 'view'})
 
 .main(function(alm) {
     // save typing ;)
-    let events = alm.events,
-        el     = alm.el;
+    const events = alm.events,
+          el     = alm.el;
 
     // Mailboxes are signals you can send values to
     let action = alm.mailbox({type: 'noop'});

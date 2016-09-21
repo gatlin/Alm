@@ -6,7 +6,7 @@ Alm
 Synopsis
 ---
 
-Alm lets you build web applications!
+Alm helps you build web applications!
 
 Here is an example application which counts the number of times you've clicked
 a button, displays the count, and updates the page title in kind.
