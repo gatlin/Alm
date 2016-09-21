@@ -3,7 +3,7 @@ Alm
 
 (c) 2016 Gatlin Johnson <gatlin@niltag.net>
 
-0. Synopsis
+Synopsis
 ---
 
 Alm lets you build web applications!
@@ -130,7 +130,7 @@ The examples are also live here:
   - http://niltag.net/todo
   - http://niltag.net/gainratio
 
-1. What?
+What?
 ---
 
 This is a functional reactive browser application toolkit. If you're unfamiliar
@@ -381,7 +381,7 @@ app.ports['incoming'].send(blah);
 
 That about wraps up the overview.
 
-2. Status
+Status
 ---
 
 THIS IS NOT READY FOR PRIMETIME DON'T YOU EVEN THINK ABOUT USING THIS SOME
@@ -391,12 +391,57 @@ That said, the example applications demonstrate Alm's expressiveness and power
 even at this immature stage. Feel free to contribute, and if you do use it the
 author would greatly appreciate any feedback or commentary!
 
-3. LICENSE
+Building and using
+---
+
+This repository already contains a pre-built, non-minified file you can use at
+`dist/alm.js`. However if you need to rebuild it for whatever reason then read
+on.
+
+Ensure that you have node and npm installed. Also `gulp-cli`:
+
+    $> npm install --global gulp-cli
+
+Once you have the prerequisites you can build `alm` like so:
+
+    $> npm install
+    $> gulp make
+
+If you want to build `alm` with some extra stuff (from `lib/loeb_extra.js`) then
+you can instead run
+
+    $> gulp make-extra
+
+What's with this `loeb.js` stuff ?
+---
+
+`loeb.js` contains some generalized abstract nonsense that I like to program
+with. For example if you define a class `YourClass` with methods `#map` and
+`#flatten` then you can write
+
+```javascript
+instance(YourClass, Functor);
+instance(YourClass, Monad);
+```
+
+and now you have `#then` and some other goodies automatically.
+
+`loeb.js` doesn't have its own repository yet because right now this is the only
+place I use it. Because it *does* have potential uses outside of Alm, though, I
+keep it separate. There are two files:
+
+- `loeb.js` contains stuff required for Alm. It is used in `gulp make`.
+- `loeb_extra.js` contains stuff I find interesting (perhaps even useful!) but
+  not necessary to build Alm. It is included if you build with `gulp make-extra`.
+
+The `bikemath` example uses stuff from `loeb_extra.js`, if you're curious.
+
+LICENSE
 ---
 
 See the included `LICENSE` file.
 
-4. Questions / comments / bugs / free money
+Questions / comments / bugs / free money
 ---
 
 Send all inquiries to <gatlin@niltag.net>, except bugs. Bugs should be
