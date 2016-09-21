@@ -183,16 +183,16 @@ var app = App.init({ gui: false })
 Next comes
 
 ```javascript
-.runtime(function(runtime) {
+.setup(function(runtime) {
     runtime.scope.foo = 'bar';
     // ...
-    return save(runtime);
+    return runtime;
 })
 ```
 
 `App` is designed to keep the internal runtime state closed off to the outside
 world. It is not a property of the object that can be publicly accessed. It's
-complicated. But the `runtime()` method is how you can access it. Reasons why
+complicated. But the `setup()` method is how you can access it. Reasons why
 you might want to do that:
 
 - To add new types of events
@@ -201,8 +201,7 @@ you might want to do that:
 - A more industrious person could potentially build an extension or plugin
   system on top of this.
 
-The `save()` function is necessary to update the runtime state, which is frozen
-for potential performance benefits.
+This function **must** return a new `runtime` value.
 
 ### The Main Event
 
