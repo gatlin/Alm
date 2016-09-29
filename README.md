@@ -95,8 +95,8 @@ array of *listeners*. When a signal receives a value it computes a result using
 its function and sends it along to each listener.
 
 ```javascript
-var signal = new Signal(x => { /* ... */ });
-var signal = Signal.make(); // new Signal(x => x);
+var signal = new alm.Signal(x => { /* ... */ });
+var signal = alm.Signal.make(); // new Signal(x => x);
 ```
 
 You can send values to a signal using `#send` and you can receive them in a
@@ -140,6 +140,22 @@ is given a chance to prioritize upcoming tasks and handle them more efficiently.
 Mailboxes must also be given an initial value, which is sent when the
 application starts. This value is not stored, but merely sent
 asynchronously.
+
+```javascript
+const Mailbox = alm.Mailbox;
+// The following guarantees at least one action is sent.
+const updates = new Mailbox({ action: 'initial' });
+const state = updates.reduce(initial_model(), (action, model) => {
+    /* use action.type to determine the new model */
+    return modified;
+});
+scope.events.click
+    .filter(evt => evt.getId() === 'the-button')
+    .recv(evt => updates.send({
+        type: 'click',
+        data: evt.getRaw()
+    }));
+```
 
 ### Virtual DOM
 
