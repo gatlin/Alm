@@ -10,14 +10,14 @@ gulp.task('js', function() {
             noImplicitAny: false,
             module: 'amd'
         }))
-        .pipe(gulp.dest('./dist'));
+        .pipe(gulp.dest('./dist/lib'));
 });
 
-gulp.task('bundle', function() {
-    return gulp.src('./dist/alm.js')
+gulp.task('bundle', ['js'], function() {
+    return gulp.src('./dist/lib/alm.js')
         .pipe(gulpWebpack({
             output: {
-                filename: 'bundle.js',
+                filename: 'alm-bundled.js',
                 libraryTarget: 'var',
                 library: 'alm'
             },
@@ -28,7 +28,7 @@ gulp.task('bundle', function() {
         .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('example', function() {
+gulp.task('example', ['bundle'], function() {
     return gulp.src('./example/src/main.js')
         .pipe(gulpWebpack({
             output: {

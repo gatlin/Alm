@@ -360,6 +360,9 @@
 	    ];
 	    var App = (function () {
 	        function App(cfg) {
+	            this.gui = typeof cfg.gui === 'undefined'
+	                ? true
+	                : cfg.gui;
 	            this.eventRoot = typeof cfg.eventRoot === 'string'
 	                ? document.getElementById(cfg.eventRoot)
 	                : typeof cfg.eventRoot === 'undefined'
@@ -396,7 +399,9 @@
 	                    this.registerEvent(evtName, sig);
 	                }
 	            }
-	            vdom_2.render(view, this.domRoot);
+	            if (this.gui) {
+	                vdom_2.render(view, this.domRoot);
+	            }
 	            return {
 	                ports: this.ports
 	            };
@@ -685,16 +690,6 @@
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
-	    function makeIndex(tree) {
-	        var index = {};
-	        for (var i = 0; i < tree.children.length; i++) {
-	            var kid = tree.children[i];
-	            if (kid.key !== null) {
-	                index[kid.key] = i;
-	            }
-	        }
-	        return index;
-	    }
 	    function diff(a, b, dom) {
 	        if (typeof b === 'undefined' || b === null) {
 	            if (dom) {

@@ -1,6 +1,6 @@
 'use strict';
 
-const alm = require('../../dist/alm.js'),
+const alm = require('../../dist/lib/alm.js'),
       el = alm.el;
 
 /* This generates unique integers for the session */
