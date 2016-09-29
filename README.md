@@ -169,10 +169,11 @@ The function `alm.el` is how you create Virtual DOMs:
 
 ```javascript
 function render(state) {
-var el = alm.el;
-return el('div', { 'id' : 'main' }, [
-  el('h1', {}, [ state.headerText]),
-  el('p', { 'class':'normal-text' }, [state.paragraphText])]);
+    var el = alm.el;
+    return el('div', { 'id' : 'main' }, [
+        el('h1', {}, [ state.headerText]),
+        el('p', { 'class':'normal-text' }, [state.paragraphText])]);
+}
 ```
 
 *NB: This isn't the the most elegant API but it is surprisingly effective. I am
