@@ -272,6 +272,17 @@ distinct AMD modules in `dist/lib`.
 An obligatory todo application is available under `example`. To build it, run
 `gulp example`.
 
+License
+---
+
+See the `LICENSE` file included with this source code.
+
+DON'T EVEN THINK ABOUT USING THIS IN PRODUCTION IF YOU CANNOT TOLERATE THE
+POTENTIAL FOR BUGS OR THINK YOU WOULD EVER FIND YOURSELF COMPLAINING TO ME NOPE
+NOT EVEN ONCE THIS SOFTWARE IS PROVIDED AS-IS WITH NO WARRANTY EXPRESS OR
+IMPLIED READ THE LICENSE ANYWAY THIS IS SUBJECT TO CHANGE ALTHOUGH HONESTLY
+PROBABLY LESS NOW.
+
 Questions / Comments / Suggestions / Free money
 ---
 
