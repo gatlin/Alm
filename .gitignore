@@ -17,3 +17,9 @@ tags
 node_modules
 .npm
 .node_repl_history
+
+# custom
+src/*.js
+./.AppleDouble
+./*/.AppleDouble
+dist/lib

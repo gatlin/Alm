@@ -6,439 +6,288 @@ Alm
 Synopsis
 ---
 
-Alm helps you build web applications!
+Alm helps you build organized and efficient web applications.
 
-Here is an example application which counts the number of times you've clicked
-a button, displays the count, and updates the page title in kind.
+The following example counts the number of times you have clicked the page,
+updating a heading as well as the page title.
 
 ```html
 <!doctype html>
-<html lang='en_US'>
-<head>
-    <meta charset='utf-8'></meta>
-    <title>Alm example</title>
-<style type='text/css'>
-div#view {
-    width: 50%;
-    margin: 0 auto;
-}
-</style>
-</head>
-<body>
-    <div id='view'></div>
-<script src='../alm.js'></script>
-<script>
-window.onload = function() {
+<html lang='en-US'>
+    <head>
+        <meta charset='utf-8'>
+        <title>alm test</title>
+    </head>
+    <body>
+        <div id='main'></div>
+        <script src='alm-bundled.js'></script>
+        <script>
+
 'use strict';
-var app = App.init({domRoot: 'view'})
-
-.main(function(alm) {
-    // save typing ;)
-    let events = alm.events,
-        el     = alm.el;
-
-    // Mailboxes are signals you can send values to
-    let action = alm.mailbox({type: 'noop'});
-
-    // Ports are signals going into or out of the app
-    let page_title = alm.port.outbound('title');
-
-    // State is elegantly managed as a signal reduction
-    let model = action.signal
-        .reduce({ counter: 0, coords: { x: 0, y: 0 } },
-        function(actn, mdl) {
-            if (actn.type === 'incr') {
-                mdl.counter++;
+const app = new alm.App({
+    domRoot: 'main',
+    ports: {
+        outbound: ['title']
+    },
+    main: (scope) => {
+        const updates = new alm.Mailbox(false);
+        const state = updates.reduce(0, (action, model) => {
+            if (action) {
+                return model+1;
             }
+            return model;
+        })
+        .map(n => n.toString());
 
-            if (actn.type === 'reset') {
-                mdl.counter = 0;
-            }
+        scope.events.click.recv(_ => updates.send(true));
+        state.connect(scope.ports.outbound.title);
 
-            if (actn.type === 'click') {
-                mdl.coords = actn.data;
-            }
-
-            return mdl;
-        });
-
-    // Listen for increment button clicks
-    events.mouse.click
-        .filter((evt) => evt.target.id === 'incr_button')
-        .recv((evt) => action.send({ type: 'incr' }));
-
-    // Listen for reset button clicks
-    events.mouse.click
-        .filter((evt) => evt.target.id === 'reset_button')
-        .recv((evt) => action.send({ type: 'reset' }));
-
-    // On any click, anywhere, update the model with the coordinates.
-    events.mouse.click
-        .recv((evt) => action.send({
-            type: 'click',
-            data: {
-                x: evt.clientX,
-                y: evt.clientY
-            }
-        }));
-
-    // Update the page title
-    model.map((mdl) => mdl.counter).connect(page_title);
-
-    return model.map((mdl) =>
-        el('div', { id: 'main' }, [
-            el('button', { id: 'incr_button' }, [ "Increment!" ]),
-            el('button', { id: 'reset_button' }, [ "Reset" ]),
-            el('p', { id: 'total' }, [ 'Clicked ' + mdl.counter + ' times']),
-            el('p', { id: 'coords' }, [ 'Mouse coords: ('+
-                mdl.coords.x + ',' + mdl.coords.y + ').'])
-        ])
-    );
-})
-
-.start(); // And away we go ~~~
-
-// Update the page title using the port
-app.ports['title'].listen(function(n) {
-    let base = 'Alm Example';
-    if (n > 0) {
-        document.title = '('+n+') ' + base;
-    } else {
-        document.title = base;
+        return state.map(n => alm.el('h1', {}, [n]));
     }
-});
-};
-</script>
-</body>
+}).start();
+
+app.ports.outbound.title
+    .recv(n => {
+        document.title = 'Clicked ' + n + ' times!';
+    });
+
+        </script>
+    </body>
 </html>
 ```
 
-This example and a more elaborate todo application may be found in `example/`.
-
-If you have `node` and `npm` installed, you can execute the following to view
-the examples locally:
-
-    $> npm i --global gulp-cli
-    $> npm install
-    $> gulp serve
-
-And navigate to `http://localhost:3000/example`.
-
-The examples are also live here:
-
-  - http://niltag.net/almtest
-  - http://niltag.net/todo
-  - http://niltag.net/gainratio
-
-What?
+How to just include it in your project without hassle
 ---
 
-This is a functional reactive browser application toolkit. If you're unfamiliar
-with this term, that's fine: it means you describe how to transform and connect
-streams of data.
+The file `dist/alm-bundled.js` is a minified single file which you can include
+in a page using a `<script>` tag. The contents of the library are made available
+on a global variable `alm`. See "Overview" for preliminary documentation.
 
-Alm borrows ideas from the [Elm programming language][elm] and its foundational
-papers. If you want theory, I can't recommend them enough. Alm is partly my
-desire to learn more about FRP, and partly to make Elm's power available in
-plain old ECMAScript.
+*More information on building is available below, under "Building."*
 
-Let's walk through the highlights. It may be helpful to refer back to the
-synopsis above occasionally.
+Overview
+---
 
-### Initialization
+Alm is a *reactive* library. At a high level you define how external events
+should be transformed into *state changes*, and then how your state should be
+mapped to a *view* and possibly other events.
 
-```javascript
-var app = App.init('some-id')
-```
+    Events ---> State Changes --> [ State Update ] --> View
+                      ^              |
+                      |              |- new events
+                      +--------------+
 
-An `App` is part of your document which *reacts* to events and possibly
-*renders* a view. These are confined to the *event root* and *DOM root*,
-respectively. The above example says "I want to listen to all events which
-occur within the element with id `some-id` and I will render a view there as
-well."
+A core concept of Alm is that state should be managed in one place. It may
+receive messages from multiple sources and there may be multiple listeners
+waiting for updates. This helps keep applications self-contained and easy to
+maintain.
 
-There are others:
+Below the core concepts are explained: *signals*, *virtual DOMs*, and
+*applications*.
 
-```javascript
-var app = App.init()
-```
+### Signals
 
-This sets the event root and DOM root to `document.body`.
-
-```javascript
-var app = App.init({ domRoot: 'element-a', eventRoot: 'element-b' })
-```
-
-This sets the DOM root to `element-a` and the event root to `element-b`. If you
-omit either, they default to `document.body`.
-
-If your application won't be rendering a view, you can do the following:
+Events and other messages are transported using *signals*. A signal does not
+contain data of its own. Instead it possesses a *one-argument function* and an
+array of *listeners*. When a signal receives a value it computes a result using
+its function and sends it along to each listener.
 
 ```javascript
-var app = App.init({ gui: false })
+var signal = new Signal(x => { /* ... */ });
+var signal = Signal.make(); // new Signal(x => x);
 ```
 
-### Runtime setup
-
-Next comes
+You can send values to a signal using `#send` and you can receive them in a
+callback using `#recv`.
 
 ```javascript
-.setup(function(runtime) {
-    runtime.scope.foo = 'bar';
-    // ...
-    return runtime;
-})
+signalA.recv(x => signalB.send(x));
 ```
 
-`App` is designed to keep the internal runtime state closed off to the outside
-world. It is not a property of the object that can be publicly accessed. It's
-complicated. But the `setup()` method is how you can access it. Reasons why
-you might want to do that:
-
-- To add new types of events
-- To modify `runtime.scope`, which is where you can put arbitrary data you
-  might need, or utility functions.
-- A more industrious person could potentially build an extension or plugin
-  system on top of this.
-
-This function **must** return a new `runtime` value.
-
-### The Main Event
-
-Once the runtime is set up properly, we have this:
+Signals may also be connected using the `#connect` method (returning the
+listener). Other operations such as `#map` and `#filter` implicitly create new
+listeners and return them.
 
 ```javascript
-.main(function(alm) {
-    // !!!
-})
+var signalB = signalA.connect(signalB);
+var signalAPlus2 = signalA.map(x => x + 2);
 ```
 
-You can obviously call `alm` whatever you want. This is a subset of the
-application runtime. Here is its actual definition in the code:
+An extremely important method is **`#reduce`**. `#reduce` takes two arguments:
+an initial *state* value and a *reducer function.* The reducer function has two
+arguments: an incoming signal value and the old state value.
 
 ```javascript
-let alm = {
-    events: runtime.events,
-    async: runtime.async,
-    setTimeout: runtime.setTimeout,
-    byId: runtime.byId,
-    mailbox: runtime.mailbox,
-    port: runtime.port,
-    scope: runtime.scope,
-    el: runtime.vdom.el,
-    timer: runtime.timer
-};
+var state_manager = updates.reduce(initialState, (action, state) => {
+    /* ... use `action` to create a new state ... */
+    return modifiedState;
+});
+
+var logger = state_manager.recv(x => console.log('state =', x));
 ```
 
-Here's the good stuff. `main()` gives you access to your private runtime data
-and expects you to return a *Signal* of *Views*. Let's break this down.
+**This is idiomatic state management in Alm.** However in practice you'll
+probably want to use a sub-class of signals, *mailboxes.*
 
-#### Signal
+#### Mailboxes
 
-A `Signal` is a value which may update at any time. `Signal`s listen to
-upstream values from other `Signal`s, do something with them, and then
-broadcast them to 0 or more receiving `Signal`s.
+`alm.Mailbox` is a sub-class of `alm.Signal`. The key distinction is that
+sending is done *asynchronously*. By sending values asynchronously the browser
+is given a chance to prioritize upcoming tasks and handle them more efficiently.
 
-All message passing and event handling is done through `Signal`s. You can
-simply take an existing one and call its `filter/map/reduce`, etc methods or
-you can connect two signals with `.connect`:
+Mailboxes must also be given an initial value, which is sent when the
+application starts. This value is not stored, but merely sent
+asynchronously.
+
+### Virtual DOM
+
+Signals are how events get into an application; the end product of an
+application is a signal of *virtual DOMs*.
+
+Virtual DOMs are essentially trees with each node containing a tag name, an
+attributes object, and an array of children.
+
+The function `alm.el` is how you create Virtual DOMs:
 
 ```javascript
-let sigB = sigA.map(foo);
-sigB.connect(sigC);
-sigB.connect(sigD);
+function render(state) {
+var el = alm.el;
+return el('div', { 'id' : 'main' }, [
+  el('h1', {}, [ state.headerText]),
+  el('p', { 'class':'normal-text' }, [state.paragraphText])]);
 ```
 
-`Signal`s are defined for a default set of browser events. Example:
+*NB: This isn't the the most elegant API but it is surprisingly effective. I am
+certainly open to discussion.*
+
+An application, as explained below, produces a signal returning these values. At
+first this might sound bad: the entire view is recomputed on each signal update,
+which is extremely slow.
+
+However `Signal#reduce` once again proves invaluable: with `null` as an initial
+value the old virtual DOM and the new virtual DOM are compared efficiently to
+determine precisely what changes need to be made to the DOM.
+
+Not all applications have views, though. If you configure your application to
+not have a GUI then this step is skipped.
+
+### Application
+
+`alm.App` ties everything together. There are six options you may provide when
+creating a new `App`, one of which is required:
+
+- **gui** *(optional)*: A boolean declaring whether or not this `App` should
+  render a view. *Default: true.*
+
+- **eventRoot** *(optional)*: Either a string giving an element ID or an
+  HTMLElement. The `App` will receive all events which occur anywhere in this
+  scope and make them available as `Signals`, which is very efficient. *Default:
+  document.*
+
+- **domRoot** *(optional)*: Either a string giving an element ID or an
+    HTMLElement. The `App` will render within this element. *Default:
+    document.body.*
+
+- **ports** *(optional)*: Ports are signals which will be made available outside
+  of the `App` to facilitate interop with other code. It is an object with two
+  keys: an `outbound` array and an `inbound` array. See "Ports" below for more
+  information. *Default: { outbound: null, inbound: null }*.
+
+- **main** *(required)*: a function given a *scope* object which returns a
+  `Signal` of virtual DOMs (or `null`). A scope is an object containing event
+  signals and *ports*.
+
+- **extraEvents** *(optional)*: An array of any other event names to which the
+  `App` should subscribe. *Default: [].*
 
 ```javascript
-events.mouse.click
-    .filter((evt) => evt.target.id === 'btn-1')
-    .map((evt) => evt.target.value)
-    .recv((value) => somewhere.send(value));
+var app = new alm.App({
+    ports: { outbound: ['title'] },
+    main: (scope) => {
+        var updates = new alm.Mailbox(false);
+        var state = updates.reduce(0, (action, model) => {
+            if (action) return model+1;
+            return model;
+        });
+        scope.events.click.recv(_ => updates.send(true));
+        state.connect(scope.ports.outbound.title);
+        return state.map(n => el('h1', {}, [n.toString()]));
+    }
+}).start();
+
+app.ports.outbound.title.recv(n => {
+    document.title = 'Clicks: ' + n.toString();
+});
 ```
-
-No need to assign anything. This statement will now funnel mouse click events
-for a specific button to a `Mailbox` called `somewhere`. Wait, what's a
-
-#### Mailbox
-
-A `Mailbox` is essentially a named `Signal` to which you may send values at any
-time. `Mailbox`es must be defined with a default value.
-
-`Mailbox`es are created with `alm.mailbox` and require a default parameter.
-You can subscribe to a mailbox by accessing its `.signal` property.
-
-#### Views
-
-I said earlier that `main` must return a `Signal` of `View`s (unless your app
-is initialized with `gui: false`). You create `View`s using the `alm.el`
-helper. `el` takes three arguments:
-
-- String name of tag
-- Dictionary of element attributes
-- (Optional) Array of either child views or text.
-
-That's right: you "recreate" the whole view each time. However, this is fairly
-cheap: the only thing you recreate each time is this nested JavaScript object.
-Alm will compare the previous tree to the current tree, compute a diff, and
-only tell the browser to redraw what is necessary. In practice this is
-efficient.
-
-If you want to be notified when an element is redrawn, you can use
-`.subscribe` and give it a mailbox. Example:
-
-```javascript
-el('p', { 'class':'small' }, [ 'This is some text hi' ]).subscribe(mbox)
-```
-
-Each time the element is recreated the `HTMLElement` will be sent to the
-specified mailbox.
-
-#### State
-
-Alm doesn't aim to be too ideological about this topic, but rather to encourage
-good habits. There is a special method on `Signal` called `.reduce`. It takes
-two arguments:
-
-- An initial state value; and
-- A callback which should expect two arguments: a signal value, and the old
-  state.
-
-The name `reduce` comes from the fact that it's like JavaScript's
-`Array.reduce`: it allows you to reduce values into an aggregate result.
-
-It just so happens this is a great way to manage your model. Example from the
-synopsis:
-
-```javascript
-let updates = alm.mailbox({ type: 'noop' });
-let model = updates.signal
-    .reduce({ counter: 0, coords: { x: 0, y: 0 } },
-    function(actn, mdl) {
-        if (actn.type === 'incr') {
-            mdl.counter++;
-        }
-
-        if (actn.type === 'reset') {
-            mdl.counter = 0;
-        }
-
-        if (actn.type === 'click') {
-            mdl.coords = actn.data;
-        }
-
-        return mdl;
-    });
-```
-
-You can now send updates to `updates` and they will transform the model.
 
 #### Ports
 
-To communicate with code outside your application you can use `Port`s. These
-come in two varieties: inbound and outbound.
+A *port* is just a `Signal`, but one which is created by the `App`, made
+available to the main function scope, and then made available to the outside
+world as a result of calling `App#start`. As of now there is really nothing
+restricting you from sending to or receiving from any kind of port but the
+`outbound` and `inbound` separation is intended to help you keep that organized.
 
-You create them with `port.inbound()` and `port.outbound`, both of which take a
-string name. Example usage from within `.main()`:
-
-```javascript
-let incoming = alm.port.inbound('incoming');
-let outgoing = alm.port.outbound('outgoing');
-
-messages_signal.connect(outgoing);
-incoming.recv((msg) => foo.send(msg));
-```
-
-How do we access these on the other side? Glad you asked!
-
-### Wrapping up and starting
-
-The final `App` method you call is `.start()`:
+Here is an inbound port example:
 
 ```javascript
-var app = App.init()
-.runtime(function(runtime) {
-    //...
-})
-.main(function(alm) {
-    //...
-})
-.start();
-```
+var app = new alm.App({
+    ports: { inbound: ['chats'] },
+    main: (scope) => {
+        /* ... */
+        scope.ports.inbound
+            .recv(chat => actions.send({
+                type: 'MessageUpdate',
+                data: chat.data
+            }));
+        /* ... */
+    }
+}).start();
 
-In the above example, `app` is an object containing the `scope` and `ports` you
-defined. To wit:
-
-```javascript
-app.ports['outgoing'].listen(function(msg) {
-    // ...
+/* ... */
+io.on('recv-chat', function(msg) {
+    app.ports.inbound.chats.send(msg);
 });
-
-app.ports['incoming'].send(blah);
 ```
 
-That about wraps up the overview.
-
-Status
+Building
 ---
 
-THIS IS NOT READY FOR PRIMETIME DON'T YOU EVEN THINK ABOUT USING THIS SOME
-PLACE IMPORTANT AND THEN GETTING MAD NOPE DON'T EVEN.
-
-That said, the example applications demonstrate Alm's expressiveness and power
-even at this immature stage. Feel free to contribute, and if you do use it the
-author would greatly appreciate any feedback or commentary!
-
-Building and using
----
-
-This repository already contains a pre-built, minified file you can use at
-`dist/alm.js`. However if you need to rebuild it for whatever reason then read
-on.
-
-Ensure that you have node and npm installed. Also `gulp-cli`:
-
-    $> npm install --global gulp-cli
-
-Once you have the prerequisites you can build `alm` like so:
+Assuming you have `node` and `npm` installed and configured correctly first
+install all the necessary dependencies:
 
     $> npm install
-    $> gulp make
 
-What's with this `loeb.js` stuff ?
+Alm uses the [`gulp`][gulp] build system. There are two `gulp` tasks targeting
+JavaScript: `dist` and `js`.
+
+`js` compiles the TypeScript files in `/` into JavaScript and creates
+distinct AMD modules in `dist/lib`.
+
+`dist` runs `js` and then bundles and minifies the contents of `dist/lib` to
+`dist/alm-bundled.js`.
+
+### The example
+
+An obligatory todo application is available under `example`. To build it, run
+`gulp example`.
+
+License
 ---
 
-`loeb.js` contains some generalized abstract nonsense that I like to program
-with. For example if you define a class `YourClass` with methods `#map` and
-`#flatten` then you can write
+See the `LICENSE` file included with this source code.
 
-```javascript
-instance(YourClass, Functor);
-instance(YourClass, Monad);
-```
+DON'T EVEN THINK ABOUT USING THIS IN PRODUCTION IF YOU CANNOT TOLERATE THE
+POTENTIAL FOR BUGS OR THINK YOU WOULD EVER FIND YOURSELF COMPLAINING TO ME NOPE
+NOT EVEN ONCE THIS SOFTWARE IS PROVIDED AS-IS WITH NO WARRANTY EXPRESS OR
+IMPLIED READ THE LICENSE ANYWAY THIS IS SUBJECT TO CHANGE ALTHOUGH HONESTLY
+PROBABLY LESS NOW.
 
-and now you have `#then` and some other goodies automatically.
-
-`loeb.js` doesn't have its own repository yet because right now this is the only
-place I use it. Because it *does* have potential uses outside of Alm, though, I
-keep it separate. There are two files:
-
-- `loeb.js` contains stuff required for Alm. It is used in `gulp make`.
-- `loeb_extra.js` contains stuff I find interesting (perhaps even useful!) but
-  not necessary to build Alm.
-
-The `bikemath` example uses stuff from `loeb_extra.js`, if you're curious.
-
-LICENSE
+Questions / Comments / Suggestions / Free money
 ---
 
-See the included `LICENSE` file.
+Feel free to email me at <gatlin@niltag.net> or use the GitHub Issue tracker.
 
-Questions / comments / bugs / free money
----
-
-Send all inquiries to <gatlin@niltag.net>, except bugs. Bugs should be
-submitted using the GitHub Issues feature.
-
-[elm]: http://elm-lang.org
+[typescript]: https://typescriptlang.org
+[amd]: http://requirejs.org/docs/whyamd.html
+[gulp]: http://gulpjs.com/
