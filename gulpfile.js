@@ -1,40 +1,41 @@
-var gulp = require('gulp')
-, serve = require('gulp-serve')
-, uglify = require('gulp-uglify')
-, browserify = require('browserify')
-, babelify = require('babelify')
-, source = require('vinyl-source-stream')
-, buffer = require('vinyl-buffer');
+var gulp = require('gulp');
+var serve = require('gulp-serve');
+var ts = require('gulp-typescript');
+var gulpWebpack = require('gulp-webpack');
+var webpack = require('webpack');
 
-gulp.task('serve', serve('./'));
-
-// Concat everything and then transform into es5
-
-function build() {
-    return browserify({
-        entries: ['./alm.js'],
-        basedir: __dirname + '/lib/'
-    })
-        .transform(babelify, {
-            plugins: [
-                [require('babel-plugin-transform-es2015-arrow-functions')],
-                [require('babel-plugin-transform-es2015-block-scoped-functions')],
-                [require('babel-plugin-transform-es2015-block-scoping')],
-                [require('babel-plugin-add-module-exports')],
-                [require('babel-plugin-transform-es2015-modules-commonjs'), {
-                    allowTopLevelThis: true
-                }]
-            ]
-        })
-        .bundle()
-        .pipe(source('alm.js'))
-        .pipe(buffer())
-        .pipe(uglify({
-            mangle: true
+gulp.task('js', function() {
+    return gulp.src('./src/*.ts')
+        .pipe(ts({
+            noImplicitAny: false,
+            module: 'amd'
         }))
-        .pipe(gulp.dest('dist'));
-}
-
-gulp.task('make', function() {
-    return build();
+        .pipe(gulp.dest('./dist'));
 });
+
+gulp.task('bundle', function() {
+    return gulp.src('./dist/alm.js')
+        .pipe(gulpWebpack({
+            output: {
+                filename: 'bundle.js',
+                libraryTarget: 'var',
+                library: 'alm'
+            },
+            plugins: [
+                new webpack.optimize.UglifyJsPlugin()
+            ]
+        }))
+        .pipe(gulp.dest('./dist'));
+});
+
+gulp.task('example', function() {
+    return gulp.src('./example/src/main.js')
+        .pipe(gulpWebpack({
+            output: {
+                filename: 'main.js'
+            }
+        }))
+        .pipe(gulp.dest('./example/dist/'));
+});
+
+gulp.task('serve', serve('./example/'));
