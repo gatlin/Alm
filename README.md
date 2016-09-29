@@ -270,7 +270,7 @@ distinct AMD modules in `dist/lib`.
 ### The example
 
 An obligatory todo application is available under `example`. To build it, run
-`gulp example`.
+`gulp example` and then `gulp serve`.
 
 License
 ---
