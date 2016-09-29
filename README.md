@@ -259,12 +259,12 @@ install all the necessary dependencies:
     $> npm install
 
 Alm uses the [`gulp`][gulp] build system. There are two `gulp` tasks targeting
-JavaScript: `dist` and `js`.
+JavaScript: `bundle` and `js`.
 
 `js` compiles the TypeScript files in `/` into JavaScript and creates
 distinct AMD modules in `dist/lib`.
 
-`dist` runs `js` and then bundles and minifies the contents of `dist/lib` to
+`bundle` runs `js` and then bundles and minifies the contents of `dist/lib` to
 `dist/alm-bundled.js`.
 
 ### The example
