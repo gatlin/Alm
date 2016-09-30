@@ -635,16 +635,25 @@
 	            this.children = children;
 	            this.treeType = treeType;
 	            this.mailbox = null;
-	            if (treeType === VTreeType.Text) {
-	                this.key = this.content;
-	            }
-	            else {
-	                if (typeof this.content.attrs.id !== 'undefined') {
+	            /* Set the key */
+	            if (treeType === VTreeType.Node) {
+	                if ('key' in this.content.attrs) {
+	                    this.key = this.content.attrs.key;
+	                }
+	                else if ('id' in this.content.attrs) {
 	                    this.key = this.content.attrs.id;
 	                }
 	                else {
-	                    this.key = null;
+	                    this.key = this.content.tag + this.children.length.toString() +
+	                        this.children.reduce(function (k, child) {
+	                            return (child.treeType === VTreeType.Node
+	                                ? child.content.tag
+	                                : child.content.substring(0, 25));
+	                        });
 	                }
+	            }
+	            else {
+	                this.key = 'key-' + this.content.substring(0, 25);
 	            }
 	        }
 	        VTree.prototype.subscribe = function (mailbox) {
@@ -758,16 +767,15 @@
 	                update = diff(tree, update, domRoot.firstChild);
 	            }
 	            return update;
-	        })
-	            .done();
+	        });
 	    }
 	    exports.render = render;
 	    /*** EXPORTED AT TOP LEVEL ***/
 	    function el(tag, attrs, children) {
 	        var children_trees = (typeof children === 'undefined')
 	            ? []
-	            : children.map(function (kid) {
-	                return (typeof kid === 'string')
+	            : children.map(function (kid, idx) {
+	                return typeof kid === 'string'
 	                    ? new VTree(kid, [], VTreeType.Text)
 	                    : kid;
 	            });

@@ -20,14 +20,24 @@ export class VTree {
         this.treeType = treeType;
         this.mailbox = null;
 
-        if (treeType === VTreeType.Text) {
-            this.key = this.content;
-        } else {
-            if (typeof this.content.attrs.id !== 'undefined') {
-                this.key = this.content.attrs.id;
-            } else {
-                this.key = null;
+        /* Set the key */
+        if (treeType === VTreeType.Node) {
+            if ('key' in this.content.attrs) {
+                this.key = this.content.attrs.key;
             }
+            else if ('id' in this.content.attrs) {
+                this.key = this.content.attrs.id;
+            }
+            else {
+                this.key = this.content.tag + this.children.length.toString() +
+                    this.children.reduce((k, child) => {
+                        return (child.treeType === VTreeType.Node
+                            ? child.content.tag
+                            : child.content.substring(0, 25));
+                    });
+            }
+        } else {
+            this.key = 'key-' + this.content.substring(0, 25);
         }
     }
 
@@ -116,7 +126,6 @@ function diff(a, b, dom) {
         }
 
         // 2. reconcile children
-
         const aLen = a.children.length;
         const bLen = b.children.length;
         const len = aLen > bLen ? aLen : bLen;
@@ -128,6 +137,7 @@ function diff(a, b, dom) {
         for (let i = 0; i < len; i++) {
             const kidA = a.children[i];
             const kidB = b.children[i];
+
             if (kidA) {
                 diff(kidA, kidB, kids[i]);
             } else {
@@ -153,20 +163,19 @@ export function render(view_signal, domRoot) {
             update = diff(tree, update, domRoot.firstChild);
         }
         return update;
-    })
-        .done();
+    });
 }
 
 /*** EXPORTED AT TOP LEVEL ***/
 
-
 export function el(tag: string, attrs: any, children: Array<any>) {
     const children_trees = (typeof children === 'undefined')
         ? []
-        : children.map(kid => {
-            return (typeof kid === 'string')
+        : children.map((kid, idx) => {
+            return typeof kid === 'string'
                 ? new VTree(kid, [], VTreeType.Text)
                 : kid;
+
         });
 
     return new VTree({
