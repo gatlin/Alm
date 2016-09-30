@@ -142,7 +142,6 @@ export class App {
     }
 
     public start() {
-        console.log('[App] ports =', this.ports);
         const view = this.main({
             events: this.events,
             ports: this.ports
