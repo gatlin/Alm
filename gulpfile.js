@@ -28,7 +28,7 @@ gulp.task('bundle', ['js'], function() {
         .pipe(gulp.dest('./dist'));
 });
 
-gulp.task('example', ['bundle'], function() {
+gulp.task('example', ['js'], function() {
     return gulp.src('./example/src/main.js')
         .pipe(gulpWebpack({
             output: {
