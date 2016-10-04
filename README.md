@@ -56,7 +56,9 @@ app.ports.outbound.title
 </html>
 ```
 
-[Another example is available on codepen.][codepen]
+[Here is that example on codepen.][codepentest]
+
+[Another more involved example is also available on codepen.][codepentodo]
 
 How to just include it in your project without hassle
 ---
@@ -310,4 +312,5 @@ Feel free to email me at <gatlin@niltag.net> or use the GitHub Issue tracker.
 [typescript]: https://typescriptlang.org
 [amd]: http://requirejs.org/docs/whyamd.html
 [gulp]: http://gulpjs.com/
-[codepen]: http://codepen.io/askeletism/pen/WGEXoJ
+[codepentest]: http://codepen.io/askeletism/pen/BLmGrk
+[codepentodo]: http://codepen.io/askeletism/pen/WGEXoJ
