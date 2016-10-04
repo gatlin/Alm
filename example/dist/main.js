@@ -70,13 +70,13 @@
 
 	/* The set of actions to perform on the model. This is just an enum. */
 	const Actions = {
-	    NoOp: 'NoOp',
-	    Add: 'Add',
-	    UpdateField: 'UpdateField',
-	    Delete: 'Delete',
-	    Complete: 'Complete',
-	    Editing: 'Editing',
-	    UpdateTask: 'UpdateTask'
+	    NoOp: 0,
+	    Add: 1,
+	    UpdateField: 2,
+	    Delete: 3,
+	    Complete: 4,
+	    Editing: 5,
+	    UpdateTask: 6
 	};
 
 	/* Generates a new task in a default state. */
@@ -94,77 +94,79 @@
 	   Returns: a new model.
 	*/
 	function update_model(action, model) {
-	    const dispatch = {
-	        'NoOp': () => {
-	            return model;
-	        },
+	    const dispatch = {};
+	    dispatch[Actions.NoOp] = () => {
 
-	        'Add': () => {
-	            if (model.field) {
-	                model.tasks.push(new_task(
-	                    model.field, model.uid
-	                ));
-	                model.uid = model.uid + 1;
-	                model.field = '';
-	            }
-	            return model;
-	        },
-
-	        'UpdateField': () => {
-	            model.field = action.content;
-	            return model;
-	        },
-	        'Delete': () => {
-	            const uid = action.content;
-	            let idx = -1;
-	            for (let i = 0; i < model.tasks.length; i++) {
-	                if (model.tasks[i].uid === uid) {
-	                    idx = i;
-	                    break;
-	                }
-	            }
-	            if (idx > -1) {
-	                model.tasks.splice(idx,1);
-	            }
-	            return model;
-	        },
-
-	        'Complete': () => {
-	            const uid = action.content;
-	            for (let i = model.tasks.length; i--; ) {
-	                if (model.tasks[i].uid === uid) {
-	                    model.tasks[i].completed =
-	                        !model.tasks[i].completed;
-	                    break;
-	                }
-	            }
-	            return model;
-	        },
-
-	        'Editing': () => {
-	            const uid = action.content;
-	            for (let i = model.tasks.length; i--; ) {
-	                if (model.tasks[i].uid === uid) {
-	                    model.tasks[i].editing = true;
-	                    break;
-	                }
-	            }
-	            return model;
-	        },
-
-	        'UpdateTask': () => {
-	            const uid = action.content.uid;
-	            for (let i = model.tasks.length; i--; ) {
-	                if (model.tasks[i].uid === uid) {
-	                    model.tasks[i].editing = false;
-	                    model.tasks[i].description =
-	                        action.content.text;
-	                    break;
-	                }
-	            }
-	            return model;
-	        }
+	        return model;
 	    };
+
+	    dispatch[Actons.Add] = () => {
+	        if (model.field) {
+	            model.tasks.push(new_task(
+	                model.field, model.uid
+	            ));
+	            model.uid = model.uid + 1;
+	            model.field = '';
+	        }
+	        return model;
+	    };
+
+	    dispatch[Actions.UpdateField] = () => {
+	        model.field = action.content;
+	        return model;
+	    };
+
+	    dispatch[Actions.Delete] = () => {
+	        const uid = action.content;
+	        let idx = -1;
+	        for (let i = 0; i < model.tasks.length; i++) {
+	            if (model.tasks[i].uid === uid) {
+	                idx = i;
+	                break;
+	            }
+	        }
+	        if (idx > -1) {
+	            model.tasks.splice(idx,1);
+	        }
+	        return model;
+	    };
+
+	    dispatch[Actions.Complete] = () => {
+	        const uid = action.content;
+	        for (let i = model.tasks.length; i--; ) {
+	            if (model.tasks[i].uid === uid) {
+	                model.tasks[i].completed =
+	                    !model.tasks[i].completed;
+	                break;
+	            }
+	        }
+	        return model;
+	    };
+
+	    dispatch[Actions.Editing] = () => {
+	        const uid = action.content;
+	        for (let i = model.tasks.length; i--; ) {
+	            if (model.tasks[i].uid === uid) {
+	                model.tasks[i].editing = true;
+	                break;
+	            }
+	        }
+	        return model;
+	    };
+
+	    dispatch[Actions.UpdateTask] = () => {
+	        const uid = action.content.uid;
+	        for (let i = model.tasks.length; i--; ) {
+	            if (model.tasks[i].uid === uid) {
+	                model.tasks[i].editing = false;
+	                model.tasks[i].description =
+	                    action.content.text;
+	                break;
+	            }
+	        }
+	        return model;
+	    };
+
 	    return dispatch[action.type]();
 	}
 
