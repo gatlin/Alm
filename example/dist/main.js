@@ -389,7 +389,6 @@
 	            this.eventRoot.addEventListener(evtName, fn, true);
 	        };
 	        App.prototype.start = function () {
-	            console.log('[App] ports =', this.ports);
 	            var view = this.main({
 	                events: this.events,
 	                ports: this.ports
@@ -638,16 +637,25 @@
 	            this.children = children;
 	            this.treeType = treeType;
 	            this.mailbox = null;
-	            if (treeType === VTreeType.Text) {
-	                this.key = this.content;
-	            }
-	            else {
-	                if (typeof this.content.attrs.id !== 'undefined') {
+	            /* Set the key */
+	            if (treeType === VTreeType.Node) {
+	                if ('key' in this.content.attrs) {
+	                    this.key = this.content.attrs.key;
+	                }
+	                else if ('id' in this.content.attrs) {
 	                    this.key = this.content.attrs.id;
 	                }
 	                else {
-	                    this.key = null;
+	                    this.key = this.content.tag + this.children.length.toString() +
+	                        this.children.reduce(function (k, child) {
+	                            return (child.treeType === VTreeType.Node
+	                                ? child.content.tag
+	                                : child.content.substring(0, 25));
+	                        });
 	                }
+	            }
+	            else {
+	                this.key = 'key-' + this.content.substring(0, 25);
 	            }
 	        }
 	        VTree.prototype.subscribe = function (mailbox) {
@@ -700,79 +708,76 @@
 	            return;
 	        }
 	        if (typeof a === 'undefined' || a === null) {
+	            // dom is the parent of the node that would exist if a weren't null
 	            dom.appendChild(VTree.makeDOMNode(b));
 	            return;
 	        }
-	        if (b.treeType === VTreeType.Node) {
-	            if (a.treeType === VTreeType.Node) {
-	                if (a.content.tag === b.content.tag) {
-	                    for (var attr in b.content.attrs) {
-	                        dom[attr] = b.content.attrs[attr];
-	                        dom.setAttribute(attr, b.content.attrs[attr]);
-	                    }
-	                    for (var attr in a.content.attrs) {
-	                        if (!(attr in b.content.attrs)) {
-	                            dom.removeAttribute(attr);
-	                        }
-	                    }
-	                    var aLen = a.children.length;
-	                    var bLen = b.children.length;
-	                    var len = aLen > bLen ? aLen : bLen;
-	                    var kids = new Array();
-	                    for (var i = 0; i < len; i++) {
-	                        kids.push(dom.childNodes[i]);
-	                    }
-	                    for (var i = 0; i < len; i++) {
-	                        var kidA = a.children[i];
-	                        var kidB = b.children[i];
-	                        if (kidA) {
-	                            diff(kidA, kidB, kids[i]);
-	                        }
-	                        else {
-	                            diff(null, kidB, dom);
-	                        }
-	                    }
-	                }
-	                else {
-	                    // tags are not the same
-	                    var p = dom.parentNode;
-	                    p.insertBefore(VTree.makeDOMNode(b), dom);
-	                    p.removeChild(dom);
+	        if (b.treeType === VTreeType.Node &&
+	            a.treeType === VTreeType.Node &&
+	            a.key === b.key) {
+	            /* They are both elements and their keys are the same. This means we
+	               need to:
+	    
+	               1. remove any attributes not present in b
+	               2. add or modify any attributes present in b
+	               3. reconcile children and recurse
+	            */
+	            // 1. reconcile attributes
+	            for (var attr in a.content.attrs) {
+	                if (!(attr in b.content.attrs)) {
+	                    dom.removeAttribute(attr);
+	                    delete dom[attr];
 	                }
 	            }
-	            else {
-	                // b is a node, a is text
-	                var p = dom.parentNode;
-	                p.insertBefore(VTree.makeDOMNode(b), dom);
-	                p.removeChild(dom);
+	            for (var attr in b.content.attrs) {
+	                dom[attr] = b.content.attrs[attr];
+	                dom.setAttribute(attr, b.content.attrs[attr]);
+	            }
+	            // 2. reconcile children
+	            var aLen = a.children.length;
+	            var bLen = b.children.length;
+	            var len = aLen > bLen ? aLen : bLen;
+	            var kids = new Array();
+	            for (var i = 0; i < len; i++) {
+	                kids.push(dom.childNodes[i]);
+	            }
+	            for (var i = 0; i < len; i++) {
+	                var kidA = a.children[i];
+	                var kidB = b.children[i];
+	                if (kidA) {
+	                    diff(kidA, kidB, kids[i]);
+	                }
+	                else {
+	                    diff(null, kidB, dom);
+	                }
 	            }
 	        }
 	        else {
-	            // both are text
+	            // wholesale replacement
 	            var p = dom.parentNode;
 	            p.insertBefore(VTree.makeDOMNode(b), dom);
 	            p.removeChild(dom);
 	        }
+	        return b;
 	    }
-	    /*** EXPORTED AT TOP LEVEL ***/
 	    function render(view_signal, domRoot) {
 	        view_signal.reduce(null, function (update, tree) {
 	            if (tree === null) {
 	                VTree.initialDOM(update, domRoot);
 	            }
 	            else {
-	                diff(tree, update, domRoot.firstChild);
+	                update = diff(tree, update, domRoot.firstChild);
 	            }
 	            return update;
-	        })
-	            .done();
+	        });
 	    }
 	    exports.render = render;
+	    /*** EXPORTED AT TOP LEVEL ***/
 	    function el(tag, attrs, children) {
 	        var children_trees = (typeof children === 'undefined')
 	            ? []
-	            : children.map(function (kid) {
-	                return (typeof kid === 'string')
+	            : children.map(function (kid, idx) {
+	                return typeof kid === 'string'
 	                    ? new VTree(kid, [], VTreeType.Text)
 	                    : kid;
 	            });
