@@ -160,7 +160,9 @@ function render_model(model) {
 
     return el('section', { id: 'the_app', class: 'app-'+guid() }, [
         el('header', { id: 'header', class: 'header-'+guid() }, [
-            el('h1', {}, ["Obligatory Todo App"]) ]),
+            el('h1', {}, ["Obligatory Todo App"]),
+            el('p', {}, ['Double-click tasks to edit them'])
+        ]),
         el('input', {
             type: 'text',
             id: 'field',
