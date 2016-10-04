@@ -96,11 +96,10 @@
 	function update_model(action, model) {
 	    const dispatch = {};
 	    dispatch[Actions.NoOp] = () => {
-
 	        return model;
 	    };
 
-	    dispatch[Actons.Add] = () => {
+	    dispatch[Actions.Add] = () => {
 	        if (model.field) {
 	            model.tasks.push(new_task(
 	                model.field, model.uid
