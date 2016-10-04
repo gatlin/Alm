@@ -16,9 +16,9 @@ const guid = (() => {
 */
 function empty_model() {
     return {
-        tasks: [],
+        tasks: [new_task('Example 1', 0), new_task('Example 2', 1)],
         field: '',
-        uid: 0
+        uid: 2
     };
 }
 

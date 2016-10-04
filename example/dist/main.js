@@ -62,9 +62,9 @@
 	*/
 	function empty_model() {
 	    return {
-	        tasks: [],
+	        tasks: [new_task('Example 1', 0), new_task('Example 2', 1)],
 	        field: '',
-	        uid: 0
+	        uid: 2
 	    };
 	}
 
@@ -644,16 +644,12 @@
 	                    this.key = this.content.attrs.id;
 	                }
 	                else {
-	                    this.key = this.content.tag + this.children.length.toString() +
-	                        this.children.reduce(function (k, child) {
-	                            return (child.treeType === VTreeType.Node
-	                                ? child.content.tag
-	                                : child.content.substring(0, 25));
-	                        });
+	                    // it'll be assigned one during diff
+	                    this.key = null;
 	                }
 	            }
 	            else {
-	                this.key = 'key-' + this.content.substring(0, 25);
+	                this.key = 'key-' + this.content;
 	            }
 	        }
 	        VTree.prototype.subscribe = function (mailbox) {
@@ -698,6 +694,23 @@
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
+	    function makeIndex(kids) {
+	        var keys = {};
+	        var free = [];
+	        for (var i = 0; i < kids.length; i++) {
+	            var kid = kids[i];
+	            if (kid.key) {
+	                keys[kid.key] = i;
+	            }
+	            else {
+	                free.push(i);
+	            }
+	        }
+	        return {
+	            keys: keys,
+	            free: free
+	        };
+	    }
 	    function diff(a, b, dom) {
 	        if (typeof b === 'undefined' || b === null) {
 	            if (dom) {
@@ -712,6 +725,7 @@
 	        }
 	        if (b.treeType === VTreeType.Node &&
 	            a.treeType === VTreeType.Node &&
+	            a.content.tag === b.content.tag &&
 	            a.key === b.key) {
 	            /* They are both elements and their keys are the same. This means we
 	               need to:
@@ -732,23 +746,55 @@
 	                dom.setAttribute(attr, b.content.attrs[attr]);
 	            }
 	            // 2. reconcile children
-	            var aLen = a.children.length;
-	            var bLen = b.children.length;
-	            var len = aLen > bLen ? aLen : bLen;
-	            var kids = new Array();
-	            for (var i = 0; i < len; i++) {
-	                kids.push(dom.childNodes[i]);
+	            var aIndex = makeIndex(a.children);
+	            var aKeys = aIndex.keys;
+	            var aFree = aIndex.free;
+	            var bIndex = makeIndex(b.children);
+	            var bKeys = bIndex.keys;
+	            var bFree = bIndex.free;
+	            var deleted = 0;
+	            for (var i = 0; i < a.children.length; i++) {
+	                var aItem = a.children[i];
+	                if (aItem.key) {
+	                    if (!(aItem.key in bKeys)) {
+	                        deleted++;
+	                    }
+	                }
 	            }
-	            for (var i = 0; i < len; i++) {
-	                var kidA = a.children[i];
-	                var kidB = b.children[i];
-	                if (kidA) {
-	                    diff(kidA, kidB, kids[i]);
+	            var idx = void 0;
+	            var free_idx = 0;
+	            var adjust = 0;
+	            for (var i = 0; i < b.children.length; i++) {
+	                var bItem = b.children[i];
+	                if (bItem.key) {
+	                    if (bItem.key in aKeys) {
+	                        idx = aKeys[bItem.key] + adjust;
+	                        var kid = dom.appendChild(dom.childNodes[idx]);
+	                        diff(a.children[idx], bItem, kid);
+	                    }
+	                    else {
+	                        diff(null, bItem, dom);
+	                        adjust++;
+	                    }
 	                }
 	                else {
-	                    diff(null, kidB, dom);
+	                    if (free_idx < aFree.length) {
+	                        console.log('free_idx = ' + free_idx + ', aFree.length = ' + aFree.length);
+	                        idx = aFree[free_idx++] + adjust;
+	                        var kid = dom.appendChild(dom.childNodes[idx]);
+	                        diff(a.children[idx], bItem, kid);
+	                    }
+	                    else {
+	                        diff(null, bItem, dom);
+	                        adjust++;
+	                    }
 	                }
 	            }
+	            for (var i = 0; i < deleted; i++) {
+	                dom.removeChild(dom.firstChild);
+	            }
+	            console.log('a =', a.children);
+	            console.log('dom = ', dom.childNodes);
 	        }
 	        else {
 	            // wholesale replacement
@@ -756,15 +802,18 @@
 	            p.insertBefore(VTree.makeDOMNode(b), dom);
 	            p.removeChild(dom);
 	        }
-	        return b;
 	    }
 	    function render(view_signal, domRoot) {
 	        view_signal.reduce(null, function (update, tree) {
+	            // Set a default key for the root node
+	            if (update.key === null) {
+	                update.key = 'root';
+	            }
 	            if (tree === null) {
 	                VTree.initialDOM(update, domRoot);
 	            }
 	            else {
-	                update = diff(tree, update, domRoot.firstChild);
+	                diff(tree, update, domRoot.firstChild);
 	            }
 	            return update;
 	        });

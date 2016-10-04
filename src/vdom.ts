@@ -29,15 +29,11 @@ export class VTree {
                 this.key = this.content.attrs.id;
             }
             else {
-                this.key = this.content.tag + this.children.length.toString() +
-                    this.children.reduce((k, child) => {
-                        return (child.treeType === VTreeType.Node
-                            ? child.content.tag
-                            : child.content.substring(0, 25));
-                    });
+                // it'll be assigned one during diff
+                this.key = null;
             }
         } else {
-            this.key = 'key-' + this.content.substring(0, 25);
+            this.key = 'key-' + this.content;
         }
     }
 
@@ -87,6 +83,23 @@ export class VTree {
     }
 }
 
+function makeIndex(kids) {
+    const keys = {};
+    const free = [];
+    for (let i = 0; i < kids.length; i++) {
+        let kid = kids[i];
+        if (kid.key) {
+            keys[kid.key] = i;
+        } else {
+            free.push(i);
+        }
+    }
+    return {
+        keys: keys,
+        free: free
+    };
+}
+
 function diff(a, b, dom) {
     if (typeof b === 'undefined' || b === null) {
         if (dom) {
@@ -103,6 +116,7 @@ function diff(a, b, dom) {
 
     if (b.treeType === VTreeType.Node &&
         a.treeType === VTreeType.Node &&
+        a.content.tag === b.content.tag &&
         a.key === b.key) {
         /* They are both elements and their keys are the same. This means we
            need to:
@@ -126,24 +140,18 @@ function diff(a, b, dom) {
         }
 
         // 2. reconcile children
-        const aLen = a.children.length;
-        const bLen = b.children.length;
-        const len = aLen > bLen ? aLen : bLen;
-        const kids = new Array();
-        for (let i = 0; i < len; i++) {
-            kids.push(dom.childNodes[i]);
-        }
+        const aIndex = makeIndex(a.children);
+        const aKeys = aIndex.keys;
+        const aFree = aIndex.free;
 
-        for (let i = 0; i < len; i++) {
-            const kidA = a.children[i];
-            const kidB = b.children[i];
+        const bIndex = makeIndex(b.children);
+        const bKeys = bIndex.keys;
+        const bFree = bIndex.free;
 
-            if (kidA) {
-                diff(kidA, kidB, kids[i]);
-            } else {
-                diff(null, kidB, dom);
-            }
-        }
+
+
+        console.log('a =', a.children);
+        console.log('dom = ', dom.childNodes);
 
     } else {
         // wholesale replacement
@@ -151,16 +159,18 @@ function diff(a, b, dom) {
         p.insertBefore(VTree.makeDOMNode(b), dom);
         p.removeChild(dom);
     }
-
-    return b;
 }
 
 export function render(view_signal, domRoot) {
     view_signal.reduce(null, (update, tree) => {
+        // Set a default key for the root node
+        if (update.key === null) {
+            update.key = 'root';
+        }
         if (tree === null) {
             VTree.initialDOM(update, domRoot);
         } else {
-            update = diff(tree, update, domRoot.firstChild);
+            diff(tree, update, domRoot.firstChild);
         }
         return update;
     });
