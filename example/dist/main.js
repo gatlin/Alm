@@ -62,9 +62,9 @@
 	*/
 	function empty_model() {
 	    return {
-	        tasks: [],
+	        tasks: [new_task('Example 1', 0), new_task('Example 2', 1)],
 	        field: '',
-	        uid: 0
+	        uid: 2
 	    };
 	}
 
@@ -204,10 +204,10 @@
 	        ]);
 	    });
 
-	    return el('section', { id: 'the_app', class: 'app-'+guid() }, [
-	        el('header', { id: 'header', class: 'header-'+guid() }, [
-	            el('h1', {}, ["Obligatory Todo App"]),
-	            el('p', {}, ['Double-click tasks to edit them'])
+	    return el('section', { id: 'the_app', class: 'app' }, [
+	        el('header', { id: 'header', class: 'header' }, [
+	            el('h1', {key: 'title' }, ["Obligatory Todo App"]),
+	            el('p', {key: 'wut'}, ['Double-click tasks to edit them'])
 	        ]),
 	        el('input', {
 	            type: 'text',
@@ -222,6 +222,9 @@
 	const app = new alm.App({
 	    domRoot: 'main',
 	    eventRoot: 'main',
+	    ports: {
+	        outbound: ['vdom_test']
+	    },
 	    main: (scope) => {
 	        const actions = new alm.Mailbox({ type: Actions.NoOp });
 	        const state = actions.reduce(empty_model(), update_model);
@@ -284,9 +287,7 @@
 
 	        return state.map(render_model);
 	    }
-	});
-
-	app.start();
+	}).start();
 
 
 /***/ },
@@ -625,46 +626,57 @@
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports) {
 	    "use strict";
-	    /*** NOT EXPORTED AT TOP LEVEL ***/
+	    /*
+	    This module started off as a clone of:
+	    https://github.com/Matt-Esch/virtual-dom
+	    
+	    However at this point, despite retaining some nomenclature, it's an entirely
+	    different algorithm.
+	    
+	    Rather than actually compute a set of patches and then apply them in two phases,
+	    this algorithm computes patches and then applies them immediately.
+	    
+	    See the `diff` function for a super fun algorithmic discussion.
+	    */
 	    var VTreeType;
 	    (function (VTreeType) {
 	        VTreeType[VTreeType["Text"] = 0] = "Text";
 	        VTreeType[VTreeType["Node"] = 1] = "Node";
 	    })(VTreeType || (VTreeType = {}));
 	    ;
+	    // exported only to `alm.ts`
 	    var VTree = (function () {
 	        function VTree(content, children, treeType) {
 	            this.content = content;
 	            this.children = children;
 	            this.treeType = treeType;
 	            this.mailbox = null;
-	            /* Set the key */
+	            /* There must be a key */
 	            if (treeType === VTreeType.Node) {
 	                if ('key' in this.content.attrs) {
 	                    this.key = this.content.attrs.key;
+	                    delete this.content.attrs.key;
 	                }
 	                else if ('id' in this.content.attrs) {
 	                    this.key = this.content.attrs.id;
 	                }
 	                else {
-	                    this.key = this.content.tag + this.children.length.toString() +
-	                        this.children.reduce(function (k, child) {
-	                            return (child.treeType === VTreeType.Node
-	                                ? child.content.tag
-	                                : child.content.substring(0, 25));
-	                        });
+	                    this.key = this.content.tag;
 	                }
 	            }
 	            else {
-	                this.key = 'key-' + this.content.substring(0, 25);
+	                this.key = this.content;
 	            }
 	        }
 	        VTree.prototype.subscribe = function (mailbox) {
 	            this.mailbox = mailbox;
 	            return this;
 	        };
-	        VTree.prototype.keyEq = function (other) {
+	        VTree.prototype.eq = function (other) {
 	            var me = this;
+	            if (!other) {
+	                return false;
+	            }
 	            if (me.key === null || other.key === null) {
 	                return false;
 	            }
@@ -701,73 +713,126 @@
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
-	    function diff(a, b, dom) {
-	        if (typeof b === 'undefined' || b === null) {
-	            if (dom) {
-	                dom.parentNode.removeChild(dom);
+	    var Op;
+	    (function (Op) {
+	        Op[Op["Merge"] = 0] = "Merge";
+	        Op[Op["Delete"] = 1] = "Delete";
+	        Op[Op["Insert"] = 2] = "Insert";
+	    })(Op || (Op = {}));
+	    ;
+	    // diff of an array where order matters
+	    // you supply two arrays and an element-wise equality function
+	    function diff_array(a, b, eq) {
+	        if (!a.length) {
+	            return b.map(function (c) { return [Op.Insert, null, c]; });
+	        }
+	        if (!b.length) {
+	            return a.map(function (c) { return [Op.Delete, c, null]; });
+	        }
+	        var m = a.length + 1;
+	        var n = b.length + 1;
+	        var d = new Array(m * n);
+	        var moves = [];
+	        for (var i_1 = 0; i_1 < m; i_1++) {
+	            d[i_1 * n] = 0;
+	        }
+	        for (var j_1 = 0; j_1 < n; j_1++) {
+	            d[j_1] = 0;
+	        }
+	        for (var i_2 = 1; i_2 < m; i_2++) {
+	            for (var j_2 = 1; j_2 < n; j_2++) {
+	                if (eq(a[i_2 - 1], b[j_2 - 1])) {
+	                    d[i_2 * n + j_2] = d[(i_2 - 1) * n + (j_2 - 1)] + 1;
+	                }
+	                else {
+	                    d[i_2 * n + j_2] = Math.max(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)]);
+	                }
 	            }
+	        }
+	        var i = m - 1, j = n - 1;
+	        while (!(i === 0 && j === 0)) {
+	            if (eq(a[i - 1], b[j - 1])) {
+	                i--;
+	                j--;
+	                moves.unshift([Op.Merge, a[i], b[j]]);
+	            }
+	            else {
+	                if (d[i * n + (j - 1)] > d[(i - 1) * n + j]) {
+	                    j--;
+	                    moves.unshift([Op.Insert, null, b[j]]);
+	                }
+	                else {
+	                    i--;
+	                    moves.unshift([Op.Delete, a[i], null]);
+	                }
+	            }
+	        }
+	        return moves;
+	    }
+	    function diff_dom(parent, a, b, index) {
+	        if (index === void 0) { index = 0; }
+	        if (typeof b === 'undefined' || b === null) {
+	            parent.removeChild(parent.childNodes[index]);
 	            return;
 	        }
 	        if (typeof a === 'undefined' || a === null) {
-	            // dom is the parent of the node that would exist if a weren't null
-	            dom.appendChild(VTree.makeDOMNode(b));
+	            parent.insertBefore(VTree.makeDOMNode(b), parent.childNodes[index]);
 	            return;
 	        }
-	        if (b.treeType === VTreeType.Node &&
-	            a.treeType === VTreeType.Node &&
-	            a.key === b.key) {
-	            /* They are both elements and their keys are the same. This means we
-	               need to:
-	    
-	               1. remove any attributes not present in b
-	               2. add or modify any attributes present in b
-	               3. reconcile children and recurse
-	            */
-	            // 1. reconcile attributes
-	            for (var attr in a.content.attrs) {
-	                if (!(attr in b.content.attrs)) {
-	                    dom.removeAttribute(attr);
-	                    delete dom[attr];
-	                }
-	            }
-	            for (var attr in b.content.attrs) {
-	                dom[attr] = b.content.attrs[attr];
-	                dom.setAttribute(attr, b.content.attrs[attr]);
-	            }
-	            // 2. reconcile children
-	            var aLen = a.children.length;
-	            var bLen = b.children.length;
-	            var len = aLen > bLen ? aLen : bLen;
-	            var kids = new Array();
-	            for (var i = 0; i < len; i++) {
-	                kids.push(dom.childNodes[i]);
-	            }
-	            for (var i = 0; i < len; i++) {
-	                var kidA = a.children[i];
-	                var kidB = b.children[i];
-	                if (kidA) {
-	                    diff(kidA, kidB, kids[i]);
-	                }
-	                else {
-	                    diff(null, kidB, dom);
+	        if (b.treeType === VTreeType.Node) {
+	            if (a.treeType === VTreeType.Node) {
+	                if (a.content.tag === b.content.tag) {
+	                    // contend with attributes
+	                    var dom = parent.childNodes[index];
+	                    for (var attr in a.content.attrs) {
+	                        if (!(attr in b.content.attrs)) {
+	                            dom.removeAttribute(attr);
+	                            delete dom[attr];
+	                        }
+	                    }
+	                    for (var attr in b.content.attrs) {
+	                        var v = b.content.attrs[attr];
+	                        if (!(attr in a.content.attrs) ||
+	                            v !== a.content.attrs[attr]) {
+	                            dom[attr] = v;
+	                            dom.setAttribute(attr, v);
+	                        }
+	                    }
+	                    // contend with the children
+	                    var moves = diff_array(a.children, b.children, function (a, b) {
+	                        if (typeof a === 'undefined')
+	                            return false;
+	                        return a.eq(b);
+	                    });
+	                    var domIndex = 0;
+	                    for (var i = 0; i < moves.length; i++) {
+	                        var move = moves[i];
+	                        diff_dom(parent.childNodes[index], move[1], move[2], domIndex);
+	                        if (move[0] !== Op.Delete) {
+	                            domIndex++;
+	                        }
+	                    }
 	                }
 	            }
 	        }
 	        else {
-	            // wholesale replacement
-	            var p = dom.parentNode;
-	            p.insertBefore(VTree.makeDOMNode(b), dom);
-	            p.removeChild(dom);
+	            // different types of nodes, `b` is a text node, or they have different
+	            // tags. in all cases just replace the DOM element.
+	            parent.replaceChild(VTree.makeDOMNode(b), parent.childNodes[index]);
 	        }
-	        return b;
 	    }
+	    // exported only to `alm.ts`
 	    function render(view_signal, domRoot) {
 	        view_signal.reduce(null, function (update, tree) {
+	            // Set a default key for the root node
+	            if (update.key === null) {
+	                update.key = 'root';
+	            }
 	            if (tree === null) {
 	                VTree.initialDOM(update, domRoot);
 	            }
 	            else {
-	                update = diff(tree, update, domRoot.firstChild);
+	                diff_dom(domRoot, tree, update);
 	            }
 	            return update;
 	        });

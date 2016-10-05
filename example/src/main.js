@@ -16,9 +16,9 @@ const guid = (() => {
 */
 function empty_model() {
     return {
-        tasks: [],
+        tasks: [new_task('Example 1', 0), new_task('Example 2', 1)],
         field: '',
-        uid: 0
+        uid: 2
     };
 }
 
@@ -158,10 +158,10 @@ function render_model(model) {
         ]);
     });
 
-    return el('section', { id: 'the_app', class: 'app-'+guid() }, [
-        el('header', { id: 'header', class: 'header-'+guid() }, [
-            el('h1', {}, ["Obligatory Todo App"]),
-            el('p', {}, ['Double-click tasks to edit them'])
+    return el('section', { id: 'the_app', class: 'app' }, [
+        el('header', { id: 'header', class: 'header' }, [
+            el('h1', {key: 'title' }, ["Obligatory Todo App"]),
+            el('p', {key: 'wut'}, ['Double-click tasks to edit them'])
         ]),
         el('input', {
             type: 'text',
@@ -176,6 +176,9 @@ function render_model(model) {
 const app = new alm.App({
     domRoot: 'main',
     eventRoot: 'main',
+    ports: {
+        outbound: ['vdom_test']
+    },
     main: (scope) => {
         const actions = new alm.Mailbox({ type: Actions.NoOp });
         const state = actions.reduce(empty_model(), update_model);
@@ -238,6 +241,4 @@ const app = new alm.App({
 
         return state.map(render_model);
     }
-});
-
-app.start();
+}).start();
