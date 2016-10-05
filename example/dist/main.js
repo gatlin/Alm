@@ -720,41 +720,14 @@
 	        Op[Op["Insert"] = 2] = "Insert";
 	    })(Op || (Op = {}));
 	    ;
-	    // computes necessary edits to DOM attributes
-	    function diff_attributes(a, b) {
-	        var moves = [];
-	        for (var attr in b) {
-	            if (!(attr in a)) {
-	                moves.push([Op.Insert, attr]);
-	            }
-	            else {
-	                if (a[attr] !== b[attr]) {
-	                    moves.push([Op.Merge, attr]);
-	                }
-	            }
-	        }
-	        for (var attr in a) {
-	            if (!(attr in b)) {
-	                moves.push([Op.Delete, attr]);
-	            }
-	        }
-	        return moves;
-	    }
 	    // diff of an array where order matters
+	    // you supply two arrays and an element-wise equality function
 	    function diff_array(a, b, eq) {
 	        if (!a.length) {
-	            return b.map(function (c) { return ({
-	                op: Op.Insert,
-	                a: null,
-	                b: c
-	            }); });
+	            return b.map(function (c) { return [Op.Insert, null, c]; });
 	        }
 	        if (!b.length) {
-	            return a.map(function (c) { return ({
-	                op: Op.Delete,
-	                a: c,
-	                b: null
-	            }); });
+	            return a.map(function (c) { return [Op.Delete, c, null]; });
 	        }
 	        var m = a.length + 1;
 	        var n = b.length + 1;
@@ -781,24 +754,16 @@
 	            if (eq(a[i - 1], b[j - 1])) {
 	                i--;
 	                j--;
-	                moves.unshift({ op: Op.Merge, a: a[i], b: b[j] });
+	                moves.unshift([Op.Merge, a[i], b[j]]);
 	            }
 	            else {
 	                if (d[i * n + (j - 1)] > d[(i - 1) * n + j]) {
 	                    j--;
-	                    moves.unshift({
-	                        op: Op.Insert,
-	                        a: null,
-	                        b: b[j]
-	                    });
+	                    moves.unshift([Op.Insert, null, b[j]]);
 	                }
 	                else {
 	                    i--;
-	                    moves.unshift({
-	                        op: Op.Delete,
-	                        a: a[i],
-	                        b: null
-	                    });
+	                    moves.unshift([Op.Delete, a[i], null]);
 	                }
 	            }
 	        }
@@ -842,21 +807,17 @@
 	                    var domIndex = 0;
 	                    for (var i = 0; i < moves.length; i++) {
 	                        var move = moves[i];
-	                        diff_dom(parent.childNodes[index], move.a, move.b, domIndex);
-	                        if (move.op !== Op.Delete) {
+	                        diff_dom(parent.childNodes[index], move[1], move[2], domIndex);
+	                        if (move[0] !== Op.Delete) {
 	                            domIndex++;
 	                        }
 	                    }
 	                }
-	                else {
-	                    parent.replaceChild(VTree.makeDOMNode(b), parent.childNodes[index]);
-	                }
-	            }
-	            else {
-	                parent.replaceChild(VTree.makeDOMNode(b), parent.childNodes[index]);
 	            }
 	        }
 	        else {
+	            // different types of nodes, `b` is a text node, or they have different
+	            // tags. in all cases just replace the DOM element.
 	            parent.replaceChild(VTree.makeDOMNode(b), parent.childNodes[index]);
 	        }
 	    }
