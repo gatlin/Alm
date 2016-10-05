@@ -713,81 +713,6 @@
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
-	    var Op;
-	    (function (Op) {
-	        Op[Op["Merge"] = 0] = "Merge";
-	        Op[Op["Delete"] = 1] = "Delete";
-	        Op[Op["Insert"] = 2] = "Insert";
-	    })(Op || (Op = {}));
-	    ;
-	    /* Similar to Wagner-Fischer.
-	    
-	       `a` is the array of old children of the current DOM node
-	       `b` is the array of new children.
-	    
-	       Let m = a.length+1, n = b.length+1. `d` is an mxn matrix.
-	       An O(m*n) pass through the matrix computes a longest common
-	       subsequence, the length of which is in the bottom-right corner.
-	    
-	       The array of patches returned will be iterated over, along with
-	       the arrays of children and the array of DOM child nodes
-	     */
-	    function list_diff(a, b) {
-	        if (!(a.length && b.length)) {
-	            return [[], []];
-	        }
-	        var m = a.length + 1;
-	        var n = b.length + 1;
-	        var d = new Array(m * n);
-	        var a_new = [];
-	        var b_new = [];
-	        /* First row and column filled with zeros */
-	        for (var i_1 = 0; i_1 < m; i_1++) {
-	            d[i_1 * n] = 0;
-	        }
-	        for (var j_1 = 0; j_1 < n; j_1++) {
-	            d[j_1] = 0;
-	        }
-	        /* Compute set of moves using matrix. */
-	        for (var i_2 = 1; i_2 < m; i_2++) {
-	            for (var j_2 = 1; j_2 < n; j_2++) {
-	                if (a[i_2 - 1] && a[i_2 - 1].eq(b[j_2 - 1])) {
-	                    d[i_2 * n + j_2] = d[(i_2 - 1) * n + (j_2 - 1)] + 1;
-	                }
-	                else {
-	                    d[i_2 * n + j_2] = Math.max(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)]);
-	                }
-	            }
-	        }
-	        var i = m - 1, j = n - 1;
-	        while (i !== 0 || j !== 0) {
-	            if (a[i - 1] && a[i - 1].eq(b[j - 1])) {
-	                i--;
-	                j--;
-	                a_new.unshift(a[i]);
-	                b_new.unshift(b[j]);
-	            }
-	            else {
-	                if (d[(i - 1) * n + j] >= d[i * n + (j - 1)]) {
-	                    i--;
-	                    a_new.unshift(a[i]);
-	                    b_new.unshift(null);
-	                }
-	                else {
-	                    j--;
-	                    a_new.unshift(null);
-	                    b_new.unshift(b[j]);
-	                }
-	            }
-	        }
-	        return [a_new, b_new];
-	    }
-	    /*
-	    Assumptions:
-	    - `a` and `b` should be compared to one another
-	    - both have keys
-	    - `dom` and `a` have the same number of children.
-	     */
 	    function diff(parent, a, b, index) {
 	        if (index === void 0) { index = 0; }
 	        if (!b) {
@@ -814,17 +739,6 @@
 	                dom.setAttribute(attr, b.content.attrs[attr]);
 	            }
 	        }
-	        /*
-	            const aLen = a.children.length;
-	            const bLen = b.children.length;
-	            const len = aLen > bLen ? aLen : bLen;
-	            for (let i = 0; i < len; i++) {
-	                const aKid = a.children[i];
-	                const bKid = b.children[i];
-	    
-	                diff(dom, aKid, bKid, i);
-	            }
-	        */
 	        var aLen = a.children.length;
 	        var bLen = b.children.length;
 	        var len = aLen > bLen ? aLen : bLen;
@@ -836,6 +750,10 @@
 	    // exported only to `alm.ts`
 	    function render(view_signal, domRoot) {
 	        view_signal.reduce(null, function (update, tree) {
+	            // Set a default key for the root node
+	            if (update.key === null) {
+	                update.key = 'root';
+	            }
 	            if (tree === null) {
 	                VTree.initialDOM(update, domRoot);
 	            }

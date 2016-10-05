@@ -100,6 +100,7 @@ export class VTree {
     }
 }
 
+<<<<<<< HEAD
 
 /*
 Assumptions:
@@ -110,9 +111,7 @@ Assumptions:
 function diff(parent, a, b, index = 0) {
 
     if (!b) {
-        if (parent.childNodes[index]) {
-            parent.removeChild(parent.childNodes[index]);
-        }
+        parent.removeChild(parent.childNodes[index]);
         return;
     }
 
@@ -124,20 +123,13 @@ function diff(parent, a, b, index = 0) {
         return;
     }
 
-    let dom = parent.childNodes[index];
-    for (let attr in a.content.attrs) {
-        if (!(attr in b.content.attrs)) {
-            dom.removeAttribute(attr);
-            delete dom[attr];
-        }
-    }
-
-    for (let attr in b.content.attrs) {
-        if (attr in a.content.attrs &&
-            attr !== a.content.attrs.attr) {
-            dom[attr] = b.content.attrs[attr];
-            dom.setAttribute(attr, b.content.attrs[attr]);
-        }
+    if (b.treeType === VTreeType.Node &&
+        a.treeType === VTreeType.Node &&
+        a.content.tag === b.content.tag &&
+        a.key === b.key) {
+        parent.replaceChild(
+            VTree.makeDOMNode(b),
+            parent.childNodes[index]);
     }
 
     const aLen = a.children.length;
@@ -157,10 +149,16 @@ function diff(parent, a, b, index = 0) {
 // exported only to `alm.ts`
 export function render(view_signal, domRoot) {
     view_signal.reduce(null, (update, tree) => {
+        // Set a default key for the root node
+        if (update.key === null) {
+            update.key = 'root';
+        }
         if (tree === null) {
             VTree.initialDOM(update, domRoot);
         } else {
+
             diff(domRoot, tree, update);
+
         }
         return update;
     });
