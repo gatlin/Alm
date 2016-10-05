@@ -100,48 +100,187 @@ export class VTree {
     }
 }
 
-/*
-Assumptions:
-- `a` and `b` should be compared to one another
-- both have keys
-- `dom` and `a` have the same number of children.
- */
-function diff(parent, a, b, index = 0) {
+enum Op {
+    Merge,
+    Delete,
+    Insert
+};
 
-    if (!b) {
+// computes necessary edits to DOM attributes
+function diff_attributes(a, b) {
+    const moves = [];
+    for (let attr in b) {
+        if (!(attr in a)) {
+            moves.push([Op.Insert, attr]);
+        } else {
+            if (a[attr] !== b[attr]) {
+                moves.push([Op.Merge, attr]);
+            }
+        }
+    }
+
+    for (let attr in a) {
+        if (!(attr in b)) {
+            moves.push([Op.Delete, attr]);
+        }
+    }
+    return moves;
+}
+
+type Eq<T> = (a: T, b: T) => boolean;
+
+// diff of an array where order matters
+function diff_array(a: any, b: any, eq: Eq<any>) {
+
+    if (!a.length) {
+        return b.map(c => ({
+            op: Op.Insert,
+            a: null,
+            b: c
+        }));
+    }
+
+    if (!b.length) {
+        return a.map(c => ({
+            op: Op.Delete,
+            a: c,
+            b: null
+        }));
+    }
+
+    const m = a.length + 1;
+    const n = b.length + 1;
+
+    const d = new Array(m * n);
+    const moves = [];
+
+    for (let i = 0; i < m; i++) {
+        d[i * n] = 0;
+    }
+
+    for (let j = 0; j < n; j++) {
+        d[j] = 0;
+    }
+
+    for (let i = 1; i < m; i++) {
+        for (let j = 1; j < n; j++) {
+            if (eq(a[i - 1], b[j - 1])) {
+                d[i * n + j] = d[(i - 1) * n + (j - 1)] + 1;
+            }
+            else {
+
+                d[i * n + j] = Math.max(
+                    d[(i - 1) * n + j],
+                    d[i * n + (j - 1)]);
+            }
+        }
+    }
+
+    let i = m - 1, j = n - 1;
+    while (!(i === 0 && j === 0)) {
+        if (eq(a[i - 1], b[j - 1])) {
+            i--;
+            j--;
+            moves.unshift({ op: Op.Merge, a: a[i], b: b[j] });
+        }
+        else {
+            if (d[i * n + (j - 1)] > d[(i - 1) * n + j]) {
+                j--;
+                moves.unshift({
+                    op: Op.Insert,
+                    a: null,
+                    b: b[j]
+                });
+            }
+            else {
+                i--;
+                moves.unshift({
+                    op: Op.Delete,
+                    a: a[i],
+                    b: null
+                });
+            }
+        }
+    }
+
+    return moves;
+}
+
+function diff_dom(parent, a, b, index = 0) {
+
+    if (typeof b === 'undefined' || b === null) {
         parent.removeChild(parent.childNodes[index]);
         return;
     }
 
-    if (!a) {
+    if (typeof a === 'undefined' || a === null) {
         parent.insertBefore(
             VTree.makeDOMNode(b),
             parent.childNodes[index]);
-
         return;
     }
 
-    if (b.treeType === VTreeType.Node &&
-        a.treeType === VTreeType.Node &&
-        a.content.tag === b.content.tag &&
-        a.key === b.key) {
+    if (b.treeType === VTreeType.Node) {
+        if (a.treeType === VTreeType.Node) {
+            if (a.content.tag === b.content.tag) {
+
+                // contend with attributes
+                let dom = parent.childNodes[index];
+                for (let attr in a.content.attrs) {
+                    if (!(attr in b.content.attrs)) {
+                        dom.removeAttribute(attr);
+                        delete dom[attr];
+                    }
+                }
+
+                for (let attr in b.content.attrs) {
+                    const v = b.content.attrs[attr];
+                    if (!(attr in a.content.attrs) ||
+                        v !== a.content.attrs[attr]) {
+                        dom[attr] = v;
+                        dom.setAttribute(attr, v);
+                    }
+                }
+
+                // contend with the children
+                const moves = diff_array(
+                    a.children,
+                    b.children,
+                    (a, b) => {
+                        if (typeof a === 'undefined')
+                            return false;
+                        return a.eq(b);
+                    });
+
+                let domIndex = 0;
+                for (let i = 0; i < moves.length; i++) {
+                    const move = moves[i];
+                    diff_dom(
+                        parent.childNodes[index],
+                        move.a,
+                        move.b,
+                        domIndex
+                    );
+                    if (move.op !== Op.Delete) {
+                        domIndex++;
+                    }
+                }
+            }
+            else {
+                parent.replaceChild(
+                    VTree.makeDOMNode(b),
+                    parent.childNodes[index]);
+            }
+        } else {
+            parent.replaceChild(
+                VTree.makeDOMNode(b),
+                parent.childNodes[index]);
+        }
+    } else {
         parent.replaceChild(
             VTree.makeDOMNode(b),
             parent.childNodes[index]);
     }
-
-    const aLen = a.children.length;
-    const bLen = b.children.length;
-    const len = aLen > bLen ? aLen : bLen;
-    for (let i = 0; i < len; i++) {
-        diff(
-            parent.childNodes[index],
-            a.children[i],
-            b.children[i],
-            i
-        );
-    }
-    return;
 }
 
 // exported only to `alm.ts`
@@ -155,7 +294,7 @@ export function render(view_signal, domRoot) {
             VTree.initialDOM(update, domRoot);
         } else {
 
-            diff(domRoot, tree, update);
+            diff_dom(domRoot, tree, update);
 
         }
         return update;
