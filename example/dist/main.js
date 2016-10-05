@@ -713,31 +713,27 @@
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
+	    /*
+	    Assumptions:
+	    - `a` and `b` should be compared to one another
+	    - both have keys
+	    - `dom` and `a` have the same number of children.
+	     */
 	    function diff(parent, a, b, index) {
 	        if (index === void 0) { index = 0; }
 	        if (!b) {
-	            if (parent.childNodes[index]) {
-	                parent.removeChild(parent.childNodes[index]);
-	            }
+	            parent.removeChild(parent.childNodes[index]);
 	            return;
 	        }
 	        if (!a) {
 	            parent.insertBefore(VTree.makeDOMNode(b), parent.childNodes[index]);
 	            return;
 	        }
-	        var dom = parent.childNodes[index];
-	        for (var attr in a.content.attrs) {
-	            if (!(attr in b.content.attrs)) {
-	                dom.removeAttribute(attr);
-	                delete dom[attr];
-	            }
-	        }
-	        for (var attr in b.content.attrs) {
-	            if (attr in a.content.attrs &&
-	                attr !== a.content.attrs.attr) {
-	                dom[attr] = b.content.attrs[attr];
-	                dom.setAttribute(attr, b.content.attrs[attr]);
-	            }
+	        if (b.treeType === VTreeType.Node &&
+	            a.treeType === VTreeType.Node &&
+	            a.content.tag === b.content.tag &&
+	            a.key === b.key) {
+	            parent.replaceChild(VTree.makeDOMNode(b), parent.childNodes[index]);
 	        }
 	        var aLen = a.children.length;
 	        var bLen = b.children.length;

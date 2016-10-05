@@ -100,8 +100,6 @@ export class VTree {
     }
 }
 
-<<<<<<< HEAD
-
 /*
 Assumptions:
 - `a` and `b` should be compared to one another
