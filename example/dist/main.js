@@ -814,18 +814,6 @@
 	                dom.setAttribute(attr, b.content.attrs[attr]);
 	            }
 	        }
-	        var reordered = list_diff(a.children, b.children);
-	        var a_kids = reordered[0];
-	        var b_kids = reordered[1];
-	        var domIndex = 0;
-	        for (var i = 0; i < dom.childNodes.length; i++) {
-	            var aKid = a_kids[i];
-	            var bKid = b_kids[i];
-	            diff(parent.childNodes[index], aKid, bKid, domIndex);
-	            if (!aKid || (aKid && bKid)) {
-	                domIndex++;
-	            }
-	        }
 	        /*
 	            const aLen = a.children.length;
 	            const bLen = b.children.length;
@@ -837,20 +825,13 @@
 	                diff(dom, aKid, bKid, i);
 	            }
 	        */
-	        /*
-	                const aLen = a.children.length;
-	                const bLen = b.children.length;
-	                const len = aLen > bLen ? aLen : bLen;
-	                for (let i = 0; i < len; i++) {
-	                    diff(
-	                        parent.childNodes[index],
-	                        a.children[i],
-	                        b.children[i],
-	                        i
-	                    );
-	                }
-	                return;
-	        */
+	        var aLen = a.children.length;
+	        var bLen = b.children.length;
+	        var len = aLen > bLen ? aLen : bLen;
+	        for (var i = 0; i < len; i++) {
+	            diff(parent.childNodes[index], a.children[i], b.children[i], i);
+	        }
+	        return;
 	    }
 	    // exported only to `alm.ts`
 	    function render(view_signal, domRoot) {
