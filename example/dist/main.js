@@ -204,10 +204,10 @@
 	        ]);
 	    });
 
-	    return el('section', { id: 'the_app', class: 'app-'+guid() }, [
-	        el('header', { id: 'header', class: 'header-'+guid() }, [
-	            el('h1', {}, ["Obligatory Todo App"]),
-	            el('p', {}, ['Double-click tasks to edit them'])
+	    return el('section', { id: 'the_app', class: 'app' }, [
+	        el('header', { id: 'header', class: 'header' }, [
+	            el('h1', {key: 'title' }, ["Obligatory Todo App"]),
+	            el('p', {key: 'wut'}, ['Double-click tasks to edit them'])
 	        ]),
 	        el('input', {
 	            type: 'text',
@@ -222,6 +222,9 @@
 	const app = new alm.App({
 	    domRoot: 'main',
 	    eventRoot: 'main',
+	    ports: {
+	        outbound: ['vdom_test']
+	    },
 	    main: (scope) => {
 	        const actions = new alm.Mailbox({ type: Actions.NoOp });
 	        const state = actions.reduce(empty_model(), update_model);
@@ -284,9 +287,7 @@
 
 	        return state.map(render_model);
 	    }
-	});
-
-	app.start();
+	}).start();
 
 
 /***/ },
@@ -625,42 +626,57 @@
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports) {
 	    "use strict";
-	    /*** NOT EXPORTED AT TOP LEVEL ***/
+	    /*
+	    This module started off as a clone of:
+	    https://github.com/Matt-Esch/virtual-dom
+	    
+	    However at this point, despite retaining some nomenclature, it's an entirely
+	    different algorithm.
+	    
+	    Rather than actually compute a set of patches and then apply them in two phases,
+	    this algorithm computes patches and then applies them immediately.
+	    
+	    See the `diff` function for a super fun algorithmic discussion.
+	    */
 	    var VTreeType;
 	    (function (VTreeType) {
 	        VTreeType[VTreeType["Text"] = 0] = "Text";
 	        VTreeType[VTreeType["Node"] = 1] = "Node";
 	    })(VTreeType || (VTreeType = {}));
 	    ;
+	    // exported only to `alm.ts`
 	    var VTree = (function () {
 	        function VTree(content, children, treeType) {
 	            this.content = content;
 	            this.children = children;
 	            this.treeType = treeType;
 	            this.mailbox = null;
-	            /* Set the key */
+	            /* There must be a key */
 	            if (treeType === VTreeType.Node) {
 	                if ('key' in this.content.attrs) {
 	                    this.key = this.content.attrs.key;
+	                    delete this.content.attrs.key;
 	                }
 	                else if ('id' in this.content.attrs) {
 	                    this.key = this.content.attrs.id;
 	                }
 	                else {
-	                    // it'll be assigned one during diff
-	                    this.key = null;
+	                    this.key = this.content.tag;
 	                }
 	            }
 	            else {
-	                this.key = 'key-' + this.content;
+	                this.key = this.content;
 	            }
 	        }
 	        VTree.prototype.subscribe = function (mailbox) {
 	            this.mailbox = mailbox;
 	            return this;
 	        };
-	        VTree.prototype.keyEq = function (other) {
+	        VTree.prototype.eq = function (other) {
 	            var me = this;
+	            if (!other) {
+	                return false;
+	            }
 	            if (me.key === null || other.key === null) {
 	                return false;
 	            }
@@ -697,126 +713,153 @@
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
-	    function makeIndex(kids) {
-	        var keys = {};
-	        var free = [];
-	        for (var i = 0; i < kids.length; i++) {
-	            var kid = kids[i];
-	            if (kid.key) {
-	                keys[kid.key] = i;
-	            }
-	            else {
-	                free.push(i);
-	            }
-	        }
-	        return {
-	            keys: keys,
-	            free: free
-	        };
-	    }
-	    function diff(a, b, dom) {
-	        if (typeof b === 'undefined' || b === null) {
-	            if (dom) {
-	                dom.parentNode.removeChild(dom);
-	            }
-	            return;
-	        }
-	        if (typeof a === 'undefined' || a === null) {
-	            // dom is the parent of the node that would exist if a weren't null
-	            dom.appendChild(VTree.makeDOMNode(b));
-	            return;
-	        }
-	        if (b.treeType === VTreeType.Node &&
-	            a.treeType === VTreeType.Node &&
-	            a.content.tag === b.content.tag &&
-	            a.key === b.key) {
-	            /* They are both elements and their keys are the same. This means we
-	               need to:
+	    var Op;
+	    (function (Op) {
+	        Op[Op["Merge"] = 0] = "Merge";
+	        Op[Op["Delete"] = 1] = "Delete";
+	        Op[Op["Insert"] = 2] = "Insert";
+	    })(Op || (Op = {}));
+	    ;
+	    /* Similar to Wagner-Fischer.
 	    
-	               1. remove any attributes not present in b
-	               2. add or modify any attributes present in b
-	               3. reconcile children and recurse
-	            */
-	            // 1. reconcile attributes
-	            for (var attr in a.content.attrs) {
-	                if (!(attr in b.content.attrs)) {
-	                    dom.removeAttribute(attr);
-	                    delete dom[attr];
+	       `a` is the array of old children of the current DOM node
+	       `b` is the array of new children.
+	    
+	       Let m = a.length+1, n = b.length+1. `d` is an mxn matrix.
+	       An O(m*n) pass through the matrix computes a longest common
+	       subsequence, the length of which is in the bottom-right corner.
+	    
+	       The array of patches returned will be iterated over, along with
+	       the arrays of children and the array of DOM child nodes
+	     */
+	    function list_diff(a, b) {
+	        if (!(a.length && b.length)) {
+	            return [[], []];
+	        }
+	        var m = a.length + 1;
+	        var n = b.length + 1;
+	        var d = new Array(m * n);
+	        var a_new = [];
+	        var b_new = [];
+	        /* First row and column filled with zeros */
+	        for (var i_1 = 0; i_1 < m; i_1++) {
+	            d[i_1 * n] = 0;
+	        }
+	        for (var j_1 = 0; j_1 < n; j_1++) {
+	            d[j_1] = 0;
+	        }
+	        /* Compute set of moves using matrix. */
+	        for (var i_2 = 1; i_2 < m; i_2++) {
+	            for (var j_2 = 1; j_2 < n; j_2++) {
+	                if (a[i_2 - 1] && a[i_2 - 1].eq(b[j_2 - 1])) {
+	                    d[i_2 * n + j_2] = d[(i_2 - 1) * n + (j_2 - 1)] + 1;
+	                }
+	                else {
+	                    d[i_2 * n + j_2] = Math.max(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)]);
 	                }
 	            }
-	            for (var attr in b.content.attrs) {
+	        }
+	        var i = m - 1, j = n - 1;
+	        while (i !== 0 || j !== 0) {
+	            if (a[i - 1] && a[i - 1].eq(b[j - 1])) {
+	                i--;
+	                j--;
+	                a_new.unshift(a[i]);
+	                b_new.unshift(b[j]);
+	            }
+	            else {
+	                if (d[(i - 1) * n + j] >= d[i * n + (j - 1)]) {
+	                    i--;
+	                    a_new.unshift(a[i]);
+	                    b_new.unshift(null);
+	                }
+	                else {
+	                    j--;
+	                    a_new.unshift(null);
+	                    b_new.unshift(b[j]);
+	                }
+	            }
+	        }
+	        return [a_new, b_new];
+	    }
+	    /*
+	    Assumptions:
+	    - `a` and `b` should be compared to one another
+	    - both have keys
+	    - `dom` and `a` have the same number of children.
+	     */
+	    function diff(parent, a, b, index) {
+	        if (index === void 0) { index = 0; }
+	        if (!b) {
+	            if (parent.childNodes[index]) {
+	                parent.removeChild(parent.childNodes[index]);
+	            }
+	            return;
+	        }
+	        if (!a) {
+	            parent.insertBefore(VTree.makeDOMNode(b), parent.childNodes[index]);
+	            return;
+	        }
+	        var dom = parent.childNodes[index];
+	        for (var attr in a.content.attrs) {
+	            if (!(attr in b.content.attrs)) {
+	                dom.removeAttribute(attr);
+	                delete dom[attr];
+	            }
+	        }
+	        for (var attr in b.content.attrs) {
+	            if (attr in a.content.attrs &&
+	                attr !== a.content.attrs.attr) {
 	                dom[attr] = b.content.attrs[attr];
 	                dom.setAttribute(attr, b.content.attrs[attr]);
 	            }
-	            // 2. reconcile children
-	            var aIndex = makeIndex(a.children);
-	            var aKeys = aIndex.keys;
-	            var aFree = aIndex.free;
-	            var bIndex = makeIndex(b.children);
-	            var bKeys = bIndex.keys;
-	            var bFree = bIndex.free;
-	            var deleted = 0;
-	            for (var i = 0; i < a.children.length; i++) {
-	                var aItem = a.children[i];
-	                if (aItem.key) {
-	                    if (!(aItem.key in bKeys)) {
-	                        deleted++;
-	                    }
-	                }
-	            }
-	            var idx = void 0;
-	            var free_idx = 0;
-	            var adjust = 0;
-	            for (var i = 0; i < b.children.length; i++) {
-	                var bItem = b.children[i];
-	                if (bItem.key) {
-	                    if (bItem.key in aKeys) {
-	                        idx = aKeys[bItem.key] + adjust;
-	                        var kid = dom.appendChild(dom.childNodes[idx]);
-	                        diff(a.children[idx], bItem, kid);
-	                    }
-	                    else {
-	                        diff(null, bItem, dom);
-	                        adjust++;
-	                    }
-	                }
-	                else {
-	                    if (free_idx < aFree.length) {
-	                        console.log('free_idx = ' + free_idx + ', aFree.length = ' + aFree.length);
-	                        idx = aFree[free_idx++] + adjust;
-	                        var kid = dom.appendChild(dom.childNodes[idx]);
-	                        diff(a.children[idx], bItem, kid);
-	                    }
-	                    else {
-	                        diff(null, bItem, dom);
-	                        adjust++;
-	                    }
-	                }
-	            }
-	            for (var i = 0; i < deleted; i++) {
-	                dom.removeChild(dom.firstChild);
-	            }
-	            console.log('a =', a.children);
-	            console.log('dom = ', dom.childNodes);
 	        }
-	        else {
-	            // wholesale replacement
-	            var p = dom.parentNode;
-	            p.insertBefore(VTree.makeDOMNode(b), dom);
-	            p.removeChild(dom);
+	        var reordered = list_diff(a.children, b.children);
+	        var a_kids = reordered[0];
+	        var b_kids = reordered[1];
+	        var domIndex = 0;
+	        for (var i = 0; i < dom.childNodes.length; i++) {
+	            var aKid = a_kids[i];
+	            var bKid = b_kids[i];
+	            diff(parent.childNodes[index], aKid, bKid, domIndex);
+	            if (!aKid || (aKid && bKid)) {
+	                domIndex++;
+	            }
 	        }
+	        /*
+	            const aLen = a.children.length;
+	            const bLen = b.children.length;
+	            const len = aLen > bLen ? aLen : bLen;
+	            for (let i = 0; i < len; i++) {
+	                const aKid = a.children[i];
+	                const bKid = b.children[i];
+	    
+	                diff(dom, aKid, bKid, i);
+	            }
+	        */
+	        /*
+	                const aLen = a.children.length;
+	                const bLen = b.children.length;
+	                const len = aLen > bLen ? aLen : bLen;
+	                for (let i = 0; i < len; i++) {
+	                    diff(
+	                        parent.childNodes[index],
+	                        a.children[i],
+	                        b.children[i],
+	                        i
+	                    );
+	                }
+	                return;
+	        */
 	    }
+	    // exported only to `alm.ts`
 	    function render(view_signal, domRoot) {
 	        view_signal.reduce(null, function (update, tree) {
-	            // Set a default key for the root node
-	            if (update.key === null) {
-	                update.key = 'root';
-	            }
 	            if (tree === null) {
 	                VTree.initialDOM(update, domRoot);
 	            }
 	            else {
-	                diff(tree, update, domRoot.firstChild);
+	                diff(domRoot, tree, update);
 	            }
 	            return update;
 	        });

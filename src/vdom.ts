@@ -1,11 +1,24 @@
 import { Signal, Mailbox } from './base';
 
-/*** NOT EXPORTED AT TOP LEVEL ***/
+/*
+This module started off as a clone of:
+https://github.com/Matt-Esch/virtual-dom
+
+However at this point, despite retaining some nomenclature, it's an entirely
+different algorithm.
+
+Rather than actually compute a set of patches and then apply them in two phases,
+this algorithm computes patches and then applies them immediately.
+
+See the `diff` function for a super fun algorithmic discussion.
+*/
+
 enum VTreeType {
     Text,
     Node
 };
 
+// exported only to `alm.ts`
 export class VTree {
     public content: any;
     public children: Array<VTree>;
@@ -20,20 +33,21 @@ export class VTree {
         this.treeType = treeType;
         this.mailbox = null;
 
-        /* Set the key */
+        /* There must be a key */
         if (treeType === VTreeType.Node) {
             if ('key' in this.content.attrs) {
                 this.key = this.content.attrs.key;
+                delete this.content.attrs.key;
             }
             else if ('id' in this.content.attrs) {
                 this.key = this.content.attrs.id;
             }
             else {
-                // it'll be assigned one during diff
-                this.key = null;
+                this.key = this.content.tag;
             }
-        } else {
-            this.key = 'key-' + this.content;
+        }
+        else {
+            this.key = this.content;
         }
     }
 
@@ -42,8 +56,11 @@ export class VTree {
         return this;
     }
 
-    keyEq(other: VTree): boolean {
+    eq(other: VTree): boolean {
         const me = this;
+        if (!other) {
+            return false;
+        }
         if (me.key === null || other.key === null) {
             return false;
         }
@@ -83,101 +100,179 @@ export class VTree {
     }
 }
 
-function makeIndex(kids) {
-    const keys = {};
-    const free = [];
-    for (let i = 0; i < kids.length; i++) {
-        let kid = kids[i];
-        if (kid.key) {
-            keys[kid.key] = i;
-        } else {
-            free.push(i);
-        }
+enum Op {
+    Merge,
+    Delete,
+    Insert
+};
+
+/* Similar to Wagner-Fischer.
+
+   `a` is the array of old children of the current DOM node
+   `b` is the array of new children.
+
+   Let m = a.length+1, n = b.length+1. `d` is an mxn matrix.
+   An O(m*n) pass through the matrix computes a longest common
+   subsequence, the length of which is in the bottom-right corner.
+
+   The array of patches returned will be iterated over, along with
+   the arrays of children and the array of DOM child nodes
+ */
+function list_diff(a, b) {
+    if (!(a.length && b.length)) {
+        return [[], []];
     }
-    return {
-        keys: keys,
-        free: free
-    };
-}
+    const m = a.length + 1;
+    const n = b.length + 1;
 
-function diff(a, b, dom) {
-    if (typeof b === 'undefined' || b === null) {
-        if (dom) {
-            dom.parentNode.removeChild(dom);
-        }
-        return;
+    const d = new Array(m * n);
+
+    const a_new = [];
+    const b_new = [];
+
+    /* First row and column filled with zeros */
+    for (let i = 0; i < m; i++) {
+        d[i * n] = 0;
     }
 
-    if (typeof a === 'undefined' || a === null) {
-        // dom is the parent of the node that would exist if a weren't null
-        dom.appendChild(VTree.makeDOMNode(b));
-        return;
+    for (let j = 0; j < n; j++) {
+        d[j] = 0;
     }
 
-    if (b.treeType === VTreeType.Node &&
-        a.treeType === VTreeType.Node &&
-        a.content.tag === b.content.tag &&
-        a.key === b.key) {
-        /* They are both elements and their keys are the same. This means we
-           need to:
-
-           1. remove any attributes not present in b
-           2. add or modify any attributes present in b
-           3. reconcile children and recurse
-        */
-
-        // 1. reconcile attributes
-        for (let attr in a.content.attrs) {
-            if (!(attr in b.content.attrs)) {
-                dom.removeAttribute(attr);
-                delete dom[attr];
+    /* Compute set of moves using matrix. */
+    for (let i = 1; i < m; i++) {
+        for (let j = 1; j < n; j++) {
+            if (a[i - 1] && a[i - 1].eq(b[j - 1])) {
+                d[i * n + j] = d[(i - 1) * n + (j - 1)] + 1;
+            } else {
+                d[i * n + j] = Math.max(
+                    d[(i - 1) * n + j],
+                    d[i * n + (j - 1)]
+                );
             }
         }
+    }
 
-        for (let attr in b.content.attrs) {
+    let i = m - 1, j = n - 1;
+    while (i !== 0 || j !== 0) {
+        if (a[i - 1] && a[i - 1].eq(b[j - 1])) {
+            i--;
+            j--;
+            a_new.unshift(a[i]);
+            b_new.unshift(b[j]);
+        }
+        else {
+            if (d[(i - 1) * n + j] >= d[i * n + (j - 1)]) {
+                i--;
+                a_new.unshift(a[i]);
+                b_new.unshift(null);
+            }
+            else {
+                j--;
+                a_new.unshift(null);
+                b_new.unshift(b[j]);
+            }
+        }
+    }
+
+    return [a_new, b_new];
+}
+
+/*
+Assumptions:
+- `a` and `b` should be compared to one another
+- both have keys
+- `dom` and `a` have the same number of children.
+ */
+function diff(parent, a, b, index = 0) {
+
+    if (!b) {
+        if (parent.childNodes[index]) {
+            parent.removeChild(parent.childNodes[index]);
+        }
+        return;
+    }
+
+    if (!a) {
+        parent.insertBefore(
+            VTree.makeDOMNode(b),
+            parent.childNodes[index]);
+
+        return;
+    }
+
+    let dom = parent.childNodes[index];
+    for (let attr in a.content.attrs) {
+        if (!(attr in b.content.attrs)) {
+            dom.removeAttribute(attr);
+            delete dom[attr];
+        }
+    }
+
+    for (let attr in b.content.attrs) {
+        if (attr in a.content.attrs &&
+            attr !== a.content.attrs.attr) {
             dom[attr] = b.content.attrs[attr];
             dom.setAttribute(attr, b.content.attrs[attr]);
         }
-
-        // 2. reconcile children
-        const aIndex = makeIndex(a.children);
-        const aKeys = aIndex.keys;
-        const aFree = aIndex.free;
-
-        const bIndex = makeIndex(b.children);
-        const bKeys = bIndex.keys;
-        const bFree = bIndex.free;
-
-
-
-        console.log('a =', a.children);
-        console.log('dom = ', dom.childNodes);
-
-    } else {
-        // wholesale replacement
-        const p = dom.parentNode;
-        p.insertBefore(VTree.makeDOMNode(b), dom);
-        p.removeChild(dom);
     }
+
+    const reordered = list_diff(a.children, b.children);
+    const a_kids = reordered[0];
+    const b_kids = reordered[1];
+    let domIndex = 0;
+    for (let i = 0; i < dom.childNodes.length; i++) {
+        let aKid = a_kids[i];
+        let bKid = b_kids[i];
+
+        diff(parent.childNodes[index],
+            aKid,
+            bKid,
+            domIndex);
+        if (!aKid || (aKid && bKid)) {
+            domIndex++;
+        }
+    }
+    /*
+        const aLen = a.children.length;
+        const bLen = b.children.length;
+        const len = aLen > bLen ? aLen : bLen;
+        for (let i = 0; i < len; i++) {
+            const aKid = a.children[i];
+            const bKid = b.children[i];
+
+            diff(dom, aKid, bKid, i);
+        }
+    */
+    /*
+            const aLen = a.children.length;
+            const bLen = b.children.length;
+            const len = aLen > bLen ? aLen : bLen;
+            for (let i = 0; i < len; i++) {
+                diff(
+                    parent.childNodes[index],
+                    a.children[i],
+                    b.children[i],
+                    i
+                );
+            }
+            return;
+    */
 }
 
+// exported only to `alm.ts`
 export function render(view_signal, domRoot) {
     view_signal.reduce(null, (update, tree) => {
-        // Set a default key for the root node
-        if (update.key === null) {
-            update.key = 'root';
-        }
         if (tree === null) {
             VTree.initialDOM(update, domRoot);
         } else {
-            diff(tree, update, domRoot.firstChild);
+            diff(domRoot, tree, update);
         }
         return update;
     });
 }
 
 /*** EXPORTED AT TOP LEVEL ***/
-
 export function el(tag: string, attrs: any, children: Array<any>) {
     const children_trees = (typeof children === 'undefined')
         ? []
