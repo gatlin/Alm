@@ -50,6 +50,10 @@ function new_task(description, id) {
 function update_model(action, model) {
     const dispatch = {};
 
+    dispatch[Actions.NoOp] = () => {
+        return model;
+    };
+
     dispatch[Actions.Add] = () => {
         if (model.field) {
             model.tasks.push(new_task(
@@ -177,7 +181,7 @@ const app = new alm.App({
     update: update_model,
     render: render_model,
     ports: {
-        outbound: ['vdom_test']
+        outbound: ['todo_count']
     },
     main: (scope) => {
 
@@ -236,5 +240,17 @@ const app = new alm.App({
                     text: evt.getValue()
                 }
             }));
+
+        // wire up the unread count
+        scope.state
+            .map(st => st.tasks
+                 .reduce((total, task) => total + (task.completed ? 0 : 1), 0))
+            .connect(scope.ports.outbound.todo_count);
     }
 }).start();
+
+console.log(app);
+
+app.ports.outbound.todo_count.recv(count => {
+    document.title = (count ? '('+count.toString()+')' : '') + ' Todo';
+});
