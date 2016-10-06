@@ -3,28 +3,51 @@
 const alm = require('../../../dist/lib/alm.js'),
       el = alm.el;
 
+function rando(min,max) {
+    return Math.floor(Math.random() * (max - min) + min);
+}
+
 const app1 = new alm.App({
     eventRoot: 'app-1',
-    ports: {
-        outbound: ['title']
+    domRoot: 'app-1',
+    state: {
+        words: ['ｗｏａｈ','ｗａｖｙ','ｔｕｂｕｌａｒ'],
+        which: 0
     },
-    state: 0,
-    update: (n, total) => total + (n ? 1 : 0),
-    gui: false,
-    main: (scope) => {
-        scope.events
-            .click
-            .connect(scope.actions);
-
-        scope.state
-            .map(n => n.toString())
-            .connect(scope.ports.outbound.title);
+    update: (_, state) => {
+        state.which = rando(0, state.words.length);
+        return state;
+    },
+    render: state => el('div', {}, [
+        el('p', {}, ['Click anywhere in this box for a random word']),
+        el('p', {'class':'aesthetic'}, [ state.words[state.which]])
+    ]),
+    main: scope => {
+        scope.events.click.connect(scope.actions);
     }
 }).start();
 
-app1.ports.outbound.title.recv(n => {
-    document.title = (n ? '('+n+') ' : '') + 'Alm';
-});
+function renderTasks(state) {
+    const input = el('input', {
+        'type': 'text',
+        'id':'app-2-input',
+        'placeholder':'Type something here go ahead'
+    });
+
+    const tasks_list = Object.keys(state.tasks)
+          .map(taskId => {
+              return el('li', {
+                  'id':'app-2-task-'+taskId,
+                  'class':'app-2-task'
+              }, [state.tasks[taskId]]);
+          });
+
+    return el('div', {}, [
+        input,
+        el('p', {}, ['Click on an item to delete it']),
+        el('ul', { 'id':'app-2-tasks' }, tasks_list)
+    ]);
+}
 
 const app2 = new alm.App({
     eventRoot: 'app-2',
@@ -42,27 +65,7 @@ const app2 = new alm.App({
         return model;
     },
 
-    render: (state) => {
-        const inp = el('input', {
-            'type': 'text',
-            'id': 'app-2-input',
-            'placeholder':'Type a reminder here'
-        });
-
-        const tasks_list =
-              el('ul', { 'id':'app-2-tasks'},
-                 Object.keys(state.tasks).map(taskId => el('li', {
-                     'id':'app-2-task-'+taskId.toString(),
-                     'class':'app-2-task'
-                 }, [state.tasks[taskId]])));
-
-        return el('div', { 'id':'app-2-main' }, [
-            el('h3', {}, ['Simple Reminder List']),
-            inp,
-            el('p', {}, ['Click on a reminder to delete it']),
-            tasks_list
-        ]);
-    },
+    render: renderTasks,
 
     main: (scope) => {
         scope.events.keydown

@@ -4,13 +4,133 @@
         <meta charset='utf-8'>
         <title>Alm</title>
         <link href="css/main.css" rel="stylesheet" media="all">
+        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/styles/default.min.css">
     </head>
     <body>
         <h1>Alm</h1>
-        <div id="app-1" class="app">
-            <p>Click here and check out the page title. Wacky!</p>
+        <div id="column-container">
+            <div class="row">
+                <p class="lead">This is a website for
+                    <a href="https://github.com/gatlin/alm">Alm</a>, a neat web
+                    application framework I made. The README has a lot of
+                    information. In the meantime here are some examples I've
+                    ginned up.</p>
+                <p class="lead">You can also see
+                    <a href="todo.html">a more involved, obligatory todo list
+                        app</a> as well as
+                    <a
+                        href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its
+                        code</a>.</p>
+                <p class="lead">If you have any questions or comments or free
+                    money don't hesitate to reach me at
+                    <a href="mailto:gatlin@niltag.net">gatlin@niltag.net</a>.</p>
+            </div>
+            <div class="row">
+                <div class="app" id="app-1-container">
+                    <h3>Simple example</h3>
+                    <div id="app-1"></div>
+                </div>
+                <div class="src" id="src-1">
+                    <pre>
+                        <code>
+function rando(min,max) {
+    return Math.floor(Math.random() * (max - min) + min);
+}
+
+const app1 = new alm.App({
+    eventRoot: 'app-1',
+    domRoot: 'app-1',
+    state: {
+        words: ['ｗｏａｈ','ｗａｖｙ','ｔｕｂｕｌａｒ'],
+        which: 0
+    },
+    update: (_, state) => {
+        state.which = rando(0, state.words.length);
+        return state;
+    },
+    render: state => el('div', {}, [
+        el('p', {},
+            ['Click anywhere in this box for a random word']),
+        el('p', {'class':'aesthetic'}, [ state.words[state.which]])
+    ]),
+    main: scope => {
+        scope.events.click.connect(scope.actions);
+    }
+}).start();
+                        </code>
+                    </pre>
+                </div>
+            </div><!-- row -->
+            <div class="row">
+                <div class="app" id="app-2-container">
+                    <h3>A silly, simple list app.</h3>
+                    <div id="app-2"></div>
+                </div>
+                <div class="src" id="src-2">
+                    <pre><code>
+const app2 = new alm.App({
+    eventRoot: 'app-2',
+    domRoot: 'app-2',
+    state: { id: 0, tasks: {} },
+    update: (action, model) => {
+        if (action.type === 'add') {
+            const uid = model.id++;
+            model.tasks[uid] = action.data;
+        }
+        else if (action.type === 'del') {
+            delete model.tasks[action.data];
+        }
+        console.log(model);
+        return model;
+    },
+
+    render: renderTasks,
+
+    main: (scope) => {
+        scope.events.keydown
+            .filter(evt => evt.getRaw().keyCode === 13 &&
+                    evt.getId() === 'app-2-input')
+            .recv(evt => scope.actions.send({
+                type: 'add',
+                data: evt.getRaw().target.value
+            }));
+
+        scope.events.click
+            .filter(evt => evt.hasClass('app-2-task'))
+            .recv(evt => scope.actions.send({
+                type: 'del',
+                data: evt.getId().split('-')[3]
+            }));
+    }
+}).start();
+
+function renderTasks(state) {
+    const input = el('input', {
+        'type': 'text',
+        'id':'app-2-input',
+        'placeholder':'Type a reminder here'
+    });
+
+    const tasks_list = Object.keys(state.tasks)
+          .map(taskId => {
+              return el('li', {
+                  'id':'app-2-task-'+taskId,
+                  'class':'app-2-task'
+              }, [state.tasks[taskId]]);
+          });
+
+    return el('div', {}, [
+        input,
+        el('p', {}, ['Click on a reminder to delete it']),
+        el('ul', { 'id':'app-2-tasks' }, tasks_list)
+    ]);
+}
+                    </code></pre>
+                </div>
+            </div>
         </div>
-        <div id="app-2" class="app"></div>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/highlight.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
         <script src="js/dist/main.js"></script>
     </body>
 </html>
