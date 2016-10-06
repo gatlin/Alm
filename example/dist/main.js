@@ -94,11 +94,11 @@
 	   Returns: a new model.
 	*/
 	function update_model(action, model) {
-	    if (action === null) {
-	        return model;
-	    }
-
 	    const dispatch = {};
+
+	    dispatch[Actions.NoOp] = () => {
+	        return model;
+	    };
 
 	    dispatch[Actions.Add] = () => {
 	        if (model.field) {
@@ -227,7 +227,7 @@
 	    update: update_model,
 	    render: render_model,
 	    ports: {
-	        outbound: ['vdom_test']
+	        outbound: ['todo_count']
 	    },
 	    main: (scope) => {
 
@@ -286,8 +286,20 @@
 	                    text: evt.getValue()
 	                }
 	            }));
+
+	        // wire up the unread count
+	        scope.state
+	            .map(st => st.tasks
+	                 .reduce((total, task) => total + (task.completed ? 0 : 1), 0))
+	            .connect(scope.ports.outbound.todo_count);
 	    }
 	}).start();
+
+	console.log(app);
+
+	app.ports.outbound.todo_count.recv(count => {
+	    document.title = (count ? '('+count.toString()+')' : '') + ' Todo';
+	});
 
 
 /***/ },
@@ -300,53 +312,72 @@
 	        for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 	    }
 	    __export(base_1);
-	    /* TODO don't export render */
 	    exports.el = vdom_1.el;
-	    /* Wraps system events and provides some convenience methods */
-	    var Event = (function () {
-	        function Event(evt) {
+	    /**
+	     * Wraps system events and provides some convenience methods.
+	     * @constructor
+	     * @param evt - The raw browser event value.
+	     */
+	    var AlmEvent = (function () {
+	        function AlmEvent(evt) {
 	            this.raw = evt;
-	            this.classes = evt.target.className.split(' ');
+	            this.classes = evt.target.className.trim().split(/\s+/g) || [];
 	            this.id = evt.target.id;
 	        }
-	        Event.prototype.hasClass = function (klass) {
+	        AlmEvent.prototype.hasClass = function (klass) {
 	            return (this.classes.indexOf(klass) !== -1);
 	        };
-	        Event.prototype.getClasses = function () {
+	        AlmEvent.prototype.getClasses = function () {
 	            return this.classes;
 	        };
-	        Event.prototype.getId = function () {
+	        AlmEvent.prototype.getId = function () {
 	            return this.id;
 	        };
-	        Event.prototype.getValue = function () {
+	        AlmEvent.prototype.getValue = function () {
 	            return this.raw.target.value;
 	        };
-	        Event.prototype.getRaw = function () {
+	        AlmEvent.prototype.getRaw = function () {
 	            return this.raw;
 	        };
-	        return Event;
+	        return AlmEvent;
 	    }());
-	    exports.Event = Event;
+	    exports.AlmEvent = AlmEvent;
+	    /**
+	     * Constructs signals emitting whichever browser event names you pass in.
+	     * @param {Array<string>} evts - The event names you want signals for.
+	     * @return {Array<Signal>} The event signals.
+	     */
 	    function makeEvents(evts) {
 	        var events = {};
 	        for (var i = 0; i < evts.length; i++) {
 	            var evtName = evts[i];
-	            events[evtName] = new base_2.Signal(function (evt) { return new Event(evt); });
+	            events[evtName] = new base_2.Signal(function (evt) { return new AlmEvent(evt); });
 	        }
 	        return events;
 	    }
+	    /**
+	     * Builds the port signals for an App.
+	     * @param {Object} portCfg - An object whose keys name arrays of desired port
+	     *                           names.
+	     *                           Eg, { outbound: ['port1','port2' ],
+	     *                                 inbound: ['port3'] }.
+	     *
+	     * @return {Object} ports - An object with the same keys but this time they
+	     *                          point to objects whose keys were in the original
+	     *                          arrays and whose values are signals.
+	     */
 	    function makePorts(portCfg) {
-	        var ports = {
-	            outbound: {},
-	            inbound: {}
-	        };
-	        for (var outPortIdx in portCfg.outbound) {
-	            var outPortName = portCfg.outbound[outPortIdx];
-	            ports.outbound[outPortName] = base_2.Signal.make();
-	        }
-	        for (var inPortIdx in portCfg.inbound) {
-	            var inPortName = portCfg.inbound[inPortIdx];
-	            ports.inbound[inPortName] = base_2.Signal.make();
+	        var ports = (typeof portCfg === 'undefined' || portCfg === null)
+	            ? { outbound: [], inbound: [] }
+	            : portCfg;
+	        for (var key in ports) {
+	            var portNames = ports[key];
+	            var portSpace = {};
+	            for (var i = 0; i < portNames.length; i++) {
+	                var portName = portNames[i];
+	                portSpace[portName] = base_2.Signal.make();
+	            }
+	            ports[key] = portSpace;
 	        }
 	        return ports;
 	    }
@@ -362,6 +393,11 @@
 	        'change',
 	        'load'
 	    ];
+	    /**
+	     * A self-contained application.
+	     * @constructor
+	     * @param {AppConfig} cfg - the configuration object.
+	     */
 	    var App = (function () {
 	        function App(cfg) {
 	            this.gui = typeof cfg.gui === 'undefined'
@@ -389,20 +425,36 @@
 	            this.update = cfg.update;
 	            this.render = this.gui ? cfg.render : null;
 	        }
+	        /**
+	         * Internal method which registers a given signal to emit upstream browser
+	         * events.
+	         */
 	        App.prototype.registerEvent = function (evtName, sig) {
 	            var fn = function (evt) { return sig.send(evt); };
 	            this.eventRoot.addEventListener(evtName, fn, true);
 	        };
+	        /**
+	         * This method actually creates the signal graph and sets up the event ->
+	         * update -> render pipeline.
+	         * @return An object containing the App's port signals and a state update
+	         * signal.
+	         */
 	        App.prototype.start = function () {
+	            var _this = this;
 	            // Setup the react -> update -> render graph
 	            var actions = new base_2.Mailbox(null);
-	            var updates = actions.reduce(this.state, this.update);
+	            var updates = actions.reduce(this.state, function (action, model) {
+	                if (action === null) {
+	                    return model;
+	                }
+	                return _this.update(action, model);
+	            });
 	            // Let the user wire up any relevant signals
 	            this.main({
 	                events: this.events,
 	                ports: this.ports,
 	                actions: actions,
-	                updates: updates
+	                state: updates
 	            });
 	            /* Find all the event listeners the user cared about and bind those */
 	            for (var evtName in this.events) {
@@ -416,13 +468,20 @@
 	                vdom_2.render(view, this.domRoot);
 	            }
 	            return {
-	                ports: this.ports
+	                ports: this.ports,
+	                state: updates
 	            };
 	        };
 	        return App;
 	    }());
 	    exports.App = App;
 	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	/*
+	[1]: The proper thing for it to wrap would be the type `Event`. However I also
+	want to be able to make assumptions about the target because I'll be getting
+	them exclusively from the browser. I do not know the proper TypeScript-fu yet
+	for expressing this properly.
+	*/
 
 
 /***/ },
@@ -479,16 +538,9 @@
 	    /**
 	    Signals route data through an application.
 	    
-	    Instead of containing explicit state signals contain a unary function
-	    and an array of listeners. When a signal is sent a value it applies its
-	    function and send the result in turn to each listener.
-	    
-	    The Signal interface is very declarative: by calling a method such as `#map`
-	    you are implicitly creating a new Signal, attaching it to the list of
-	    the callee's receivers, and receiving the new signal as a result.
-	    
-	    Thus you can start with an existing signal and simply chain method calls to
-	    construct a pipeline.
+	    A signal is a unary function paired with an array of listeners. When a signal
+	    receives a value it computes a result using its function and then sends that to
+	    each of its listeners.
 	    */
 	    var Signal = (function () {
 	        function Signal(fn) {
@@ -543,69 +595,6 @@
 	    }());
 	    exports.Signal = Signal;
 	    /**
-	    Yet another implementation of promises.
-	    
-	    Whereas Signals are intended to run multiple times and repeatedly send values to
-	    any listeners, Async computations call each listener at most once for a given
-	    promise.
-	    
-	    Because they are derived from Signals you can use Async computations anywhere
-	    you would use a Signal.
-	    */
-	    var Async = (function (_super) {
-	        __extends(Async, _super);
-	        function Async() {
-	            _super.call(this, function (x) { return x; });
-	            this.value = null;
-	        }
-	        Async.of = function (v) {
-	            var a = new Async();
-	            a.send(v);
-	            return a;
-	        };
-	        Async.pipe = function (ms) {
-	            return FlatMap.pipe(ms);
-	        };
-	        Async.prototype.recv = function (cb) {
-	            var _this = this;
-	            if (this.value !== null) {
-	                async(function () { return cb(_this.value); });
-	            }
-	            else {
-	                _super.prototype.recv.call(this, cb);
-	            }
-	            return this;
-	        };
-	        Async.prototype.send = function (v) {
-	            if (this.value !== null) {
-	                return;
-	            }
-	            this.value = v;
-	            _super.prototype.send.call(this, v);
-	            this.listeners = [];
-	        };
-	        Async.prototype.map = function (f) {
-	            var a = new Async();
-	            this.recv(function (val) { return a.send(f(val)); });
-	            return a;
-	        };
-	        Async.prototype.flatten = function () {
-	            var a = new Async();
-	            this.recv(function (a2) {
-	                a2.recv(function (val) {
-	                    a.send(val);
-	                });
-	            });
-	            return a;
-	        };
-	        /* Will be derived from Monad */
-	        Async.prototype.flatMap = function (f) { return null; };
-	        Async.prototype.pipe = function (_) { return null; };
-	        return Async;
-	    }(Signal));
-	    exports.Async = Async;
-	    derive(Async, [FlatMap]);
-	    /**
 	    A signal to which you may send and receive values. Messages are sent
 	    asynchronously.
 	    */
@@ -646,15 +635,30 @@
 	    Rather than actually compute a set of patches and then apply them in two phases,
 	    this algorithm computes patches and then applies them immediately.
 	    
-	    See the `diff` function for a super fun algorithmic discussion.
+	    See the `diff_*` functions for a super fun algorithmic discussion.
 	    */
+	    // Helper exported at top level for creating vdom trees.
+	    function el(tag, attrs, children) {
+	        var children_trees = (typeof children === 'undefined')
+	            ? []
+	            : children.map(function (kid, idx) {
+	                return typeof kid === 'string'
+	                    ? new VTree(kid, [], VTreeType.Text)
+	                    : kid;
+	            });
+	        return new VTree({
+	            tag: tag,
+	            attrs: attrs
+	        }, children_trees, VTreeType.Node);
+	    }
+	    exports.el = el;
 	    var VTreeType;
 	    (function (VTreeType) {
 	        VTreeType[VTreeType["Text"] = 0] = "Text";
 	        VTreeType[VTreeType["Node"] = 1] = "Node";
 	    })(VTreeType || (VTreeType = {}));
 	    ;
-	    // exported only to `alm.ts`
+	    // exported only to `alm.ts`. This is our tree representation.
 	    var VTree = (function () {
 	        function VTree(content, children, treeType) {
 	            this.content = content;
@@ -683,46 +687,44 @@
 	            return this;
 	        };
 	        VTree.prototype.eq = function (other) {
-	            var me = this;
 	            if (!other) {
 	                return false;
 	            }
-	            if (me.key === null || other.key === null) {
-	                return false;
-	            }
-	            return (me.key === other.key);
-	        };
-	        VTree.makeDOMNode = function (tree) {
-	            if (tree === null) {
-	                return null;
-	            }
-	            if (tree.treeType === VTreeType.Text) {
-	                return document.createTextNode(tree.content);
-	            }
-	            var el = document.createElement(tree.content.tag);
-	            for (var key in tree.content.attrs) {
-	                el.setAttribute(key, tree.content.attrs[key]);
-	            }
-	            for (var i = 0; i < tree.children.length; i++) {
-	                var child = VTree.makeDOMNode(tree.children[i]);
-	                el.appendChild(child);
-	            }
-	            if (tree.mailbox !== null) {
-	                tree.mailbox.send(el);
-	            }
-	            return el;
-	        };
-	        VTree.initialDOM = function (tree, domRoot) {
-	            var root = domRoot;
-	            var domTree = VTree.makeDOMNode(tree);
-	            while (root.firstChild) {
-	                root.removeChild(root.firstChild);
-	            }
-	            root.appendChild(domTree);
+	            return (this.key === other.key);
 	        };
 	        return VTree;
 	    }());
 	    exports.VTree = VTree;
+	    // Construct an actual DOM node from a VTree.
+	    function makeDOMNode(tree) {
+	        if (tree === null) {
+	            return null;
+	        }
+	        if (tree.treeType === VTreeType.Text) {
+	            return document.createTextNode(tree.content);
+	        }
+	        var el = document.createElement(tree.content.tag);
+	        for (var key in tree.content.attrs) {
+	            el.setAttribute(key, tree.content.attrs[key]);
+	        }
+	        for (var i = 0; i < tree.children.length; i++) {
+	            var child = makeDOMNode(tree.children[i]);
+	            el.appendChild(child);
+	        }
+	        // if a mailbox was subscribed, notify it the element was re-rendered
+	        if (tree.mailbox !== null) {
+	            tree.mailbox.send(el);
+	        }
+	        return el;
+	    }
+	    function initialDOM(domRoot, tree) {
+	        var root = domRoot;
+	        var domTree = makeDOMNode(tree);
+	        while (root.firstChild) {
+	            root.removeChild(root.firstChild);
+	        }
+	        root.appendChild(domTree);
+	    }
 	    var Op;
 	    (function (Op) {
 	        Op[Op["Merge"] = 0] = "Merge";
@@ -786,7 +788,7 @@
 	            return;
 	        }
 	        if (typeof a === 'undefined' || a === null) {
-	            parent.insertBefore(VTree.makeDOMNode(b), parent.childNodes[index]);
+	            parent.insertBefore(makeDOMNode(b), parent.childNodes[index]);
 	            return;
 	        }
 	        if (b.treeType === VTreeType.Node) {
@@ -828,18 +830,14 @@
 	        else {
 	            // different types of nodes, `b` is a text node, or they have different
 	            // tags. in all cases just replace the DOM element.
-	            parent.replaceChild(VTree.makeDOMNode(b), parent.childNodes[index]);
+	            parent.replaceChild(makeDOMNode(b), parent.childNodes[index]);
 	        }
 	    }
 	    // exported only to `alm.ts`
 	    function render(view_signal, domRoot) {
 	        view_signal.reduce(null, function (update, tree) {
-	            // Set a default key for the root node
-	            if (update.key === null) {
-	                update.key = 'root';
-	            }
 	            if (tree === null) {
-	                VTree.initialDOM(update, domRoot);
+	                initialDOM(domRoot, update);
 	            }
 	            else {
 	                diff_dom(domRoot, tree, update);
@@ -848,21 +846,6 @@
 	        });
 	    }
 	    exports.render = render;
-	    /*** EXPORTED AT TOP LEVEL ***/
-	    function el(tag, attrs, children) {
-	        var children_trees = (typeof children === 'undefined')
-	            ? []
-	            : children.map(function (kid, idx) {
-	                return typeof kid === 'string'
-	                    ? new VTree(kid, [], VTreeType.Text)
-	                    : kid;
-	            });
-	        return new VTree({
-	            tag: tag,
-	            attrs: attrs
-	        }, children_trees, VTreeType.Node);
-	    }
-	    exports.el = el;
 	}.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 

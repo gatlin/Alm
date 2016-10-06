@@ -1,5 +1,4 @@
 export * from './base';
-/* TODO don't export render */
 export { el } from './vdom';
 
 import {
@@ -12,31 +11,20 @@ import {
 
 import { VTree, render } from './vdom';
 
-export type AppDefn<T> = {
-    gui: boolean | void;
-    eventRoot: HTMLElement | Document | string | void;
-    domRoot: HTMLElement | string | void;
-    state: T;
-    update: (a: any, m: T) => T;
-    render: (t: T) => Signal<any, VTree> | void;
-    ports: {
-        outbound: Array<string> | void;
-        inbound: Array<string> | void;
-    } | void;
-    extraEvents: Array<string> | void;
-    main: (t: any) => void;
-};
-
-/* Wraps system events and provides some convenience methods */
-export class Event {
-    private raw: any; // TODO: what is the type of a browser event again?
-    private classes: Array<string>;
-    private id: string;
-    private value: any;
+/**
+ * Wraps system events and provides some convenience methods.
+ * @constructor
+ * @param evt - The raw browser event value.
+ */
+export class AlmEvent {
+    private readonly raw: any; // See [1] at the bottom of the code
+    private readonly classes: Array<string>;
+    private readonly id: string;
+    private readonly value: any;
 
     constructor(evt) {
         this.raw = evt;
-        this.classes = evt.target.className.split(' ');
+        this.classes = evt.target.className.trim().split(/\s+/g) || [];
         this.id = evt.target.id;
     }
 
@@ -61,29 +49,44 @@ export class Event {
     }
 }
 
+/**
+ * Constructs signals emitting whichever browser event names you pass in.
+ * @param {Array<string>} evts - The event names you want signals for.
+ * @return {Array<Signal>} The event signals.
+ */
 function makeEvents(evts) {
     const events = {};
     for (let i = 0; i < evts.length; i++) {
         let evtName = evts[i];
-        events[evtName] = new Signal(evt => new Event(evt));
+        events[evtName] = new Signal(evt => new AlmEvent(evt));
     }
     return events;
 }
 
+/**
+ * Builds the port signals for an App.
+ * @param {Object} portCfg - An object whose keys name arrays of desired port
+ *                           names.
+ *                           Eg, { outbound: ['port1','port2' ],
+ *                                 inbound: ['port3'] }.
+ *
+ * @return {Object} ports - An object with the same keys but this time they
+ *                          point to objects whose keys were in the original
+ *                          arrays and whose values are signals.
+ */
 function makePorts(portCfg) {
-    const ports = {
-        outbound: {},
-        inbound: {}
-    };
+    const ports = (typeof portCfg === 'undefined' || portCfg === null)
+        ? { outbound: [], inbound: [] }
+        : portCfg;
 
-    for (let outPortIdx in portCfg.outbound) {
-        const outPortName = portCfg.outbound[outPortIdx];
-        ports.outbound[outPortName] = Signal.make();
-    }
-
-    for (let inPortIdx in portCfg.inbound) {
-        const inPortName = portCfg.inbound[inPortIdx];
-        ports.inbound[inPortName] = Signal.make();
+    for (let key in ports) {
+        const portNames = ports[key];
+        const portSpace = {};
+        for (let i = 0; i < portNames.length; i++) {
+            const portName = portNames[i];
+            portSpace[portName] = Signal.make();
+        }
+        ports[key] = portSpace;
     }
 
     return ports;
@@ -102,6 +105,27 @@ const standardEvents = [
     'load'
 ];
 
+/** The type of the object used to configure an App.  */
+export type AppConfig<T> = {
+    state: T;
+    update: (a: any, m: T) => T;
+    main: (t: any) => void;
+    gui?: boolean;
+    eventRoot?: HTMLElement | Document | string;
+    domRoot?: HTMLElement | string;
+    render?: (t: T) => Signal<any, VTree>;
+    ports?: {
+        outbound?: Array<string>;
+        inbound?: Array<string>;
+    };
+    extraEvents?: Array<string>;
+};
+
+/**
+ * A self-contained application.
+ * @constructor
+ * @param {AppConfig} cfg - the configuration object.
+ */
 export class App<T> {
     private gui: boolean;
     private eventRoot: HTMLElement | Document;
@@ -109,11 +133,11 @@ export class App<T> {
     private events: any
     private main: (t: any) => void;
     private ports: any;
-    private state;
-    private update;
-    private render;
+    private state: T;
+    private update: (a: any, m: T) => T;
+    private render: (t: T) => Signal<any, VTree>;
 
-    constructor(cfg: AppDefn<T>) {
+    constructor(cfg: AppConfig<T>) {
 
         this.gui = typeof cfg.gui === 'undefined'
             ? true
@@ -146,11 +170,21 @@ export class App<T> {
         this.render = this.gui ? cfg.render : null;
     }
 
+    /**
+     * Internal method which registers a given signal to emit upstream browser
+     * events.
+     */
     private registerEvent(evtName, sig) {
         const fn = (evt) => sig.send(evt);
         this.eventRoot.addEventListener(evtName, fn, true);
     }
 
+    /**
+     * This method actually creates the signal graph and sets up the event ->
+     * update -> render pipeline.
+     * @return An object containing the App's port signals and a state update
+     * signal.
+     */
     public start() {
         // Setup the react -> update -> render graph
         const actions = new Mailbox(null);
@@ -188,3 +222,10 @@ export class App<T> {
         };
     }
 }
+
+/*
+[1]: The proper thing for it to wrap would be the type `Event`. However I also
+want to be able to make assumptions about the target because I'll be getting
+them exclusively from the browser. I do not know the proper TypeScript-fu yet
+for expressing this properly.
+*/
