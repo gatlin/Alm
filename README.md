@@ -8,45 +8,7 @@ Synopsis
 
 Alm helps you build organized and efficient web applications.
 
-The following example counts the number of times you have clicked the page,
-updating a heading as well as the page title.
-
-```html
-<!doctype html>
-<html lang='en-US'>
-    <head>
-        <meta charset='utf-8'>
-        <title>alm test</title>
-    </head>
-    <body>
-        <div id='main'></div>
-        <script src='alm-bundled.js'></script>
-        <script>
-
-'use strict';
-const app = new alm.App({
-    domRoot: 'main',
-    ports: {
-        outbound: ['title']
-    },
-    state: 0,
-    update: (v, n) => n + (v ? 1 : 0),
-    render: (n) => alm.el('h1', {}, [n.toString()]),
-    main: (scope) => {
-        scope.events.click.recv(_ => scope.actions.send(true));
-        state.connect(scope.ports.outbound.title);
-    }
-}).start();
-
-app.ports.outbound.title
-    .recv(n => {
-        document.title = 'Clicked ' + n.toString() + ' times!';
-    });
-
-        </script>
-    </body>
-</html>
-```
+[Here is an example todo list app on codepen][codepentodo].
 
 *I'm not always certain I have properly updated the examples when I bundle a new
 version so let me know if something is wrong!*
@@ -241,4 +203,4 @@ Feel free to email me at <gatlin@niltag.net> or use the GitHub Issue tracker.
 [amd]: http://requirejs.org/docs/whyamd.html
 [gulp]: http://gulpjs.com/
 [codepentest]: http://codepen.io/askeletism/pen/BLmGrk
-[codepentodo]: http://codepen.io/askeletism/pen/WGEXoJ
+[codepentodo]: http://codepen.io/askeletism/pen/YGYvJO
