@@ -8,7 +8,7 @@ Synopsis
 
 Alm helps you build organized and efficient web applications.
 
-[Here is an example todolist app][todoexample]. The source is under
+[Here is an example todo list app][todoexample]. The source is under
 `docs/js/src/todo.js`.
 
 *I'm not always certain I have properly updated the examples when I bundle a new
