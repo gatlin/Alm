@@ -52,14 +52,16 @@ function renderTasks(state) {
 const app2 = new alm.App({
     eventRoot: 'app-2',
     domRoot: 'app-2',
-    state: { id: 0, tasks: {} },
+    state: { id: 0, tasks: {}, num: 0 },
     update: (action, model) => {
         if (action.type === 'add') {
             const uid = model.id++;
+            model.num++;
             model.tasks[uid] = action.data;
         }
         else if (action.type === 'del') {
             delete model.tasks[action.data];
+            model.num--;
         }
         console.log(model);
         return model;
@@ -82,5 +84,19 @@ const app2 = new alm.App({
                 type: 'del',
                 data: evt.getId().split('-')[3]
             }));
+
+        scope.state
+            .map(model => (model.num
+                           ? '('+model.num.toString()+') '
+                           : '') + 'Alm')
+            .connect(scope.ports.outbound.title);
+    },
+    ports: {
+        outbound: ['title']
     }
 }).start();
+
+app2.ports.outbound.title
+    .recv(title => {
+        document.title = title;
+    });

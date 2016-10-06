@@ -103,8 +103,22 @@ const app2 = new alm.App({
                 type: 'del',
                 data: evt.getId().split('-')[3]
             }));
+
+        scope.state
+            .map(model => (model.num
+                           ? '('+model.num.toString()+') '
+                           : '') + 'Alm')
+            .connect(scope.ports.outbound.title);
+    },
+    ports: {
+        outbound: ['title']
     }
 }).start();
+
+app2.ports.outbound.title
+    .recv(title => {
+        document.title = title;
+    });
 
 function renderTasks(state) {
     const input = el('input', {
