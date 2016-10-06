@@ -50,6 +50,10 @@ function new_task(description, id) {
 function update_model(action, model) {
     const dispatch = {};
 
+    dispatch[Actions.NoOp] = () => {
+        return model;
+    };
+
     dispatch[Actions.Add] = () => {
         if (model.field) {
             model.tasks.push(new_task(
