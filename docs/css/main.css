@@ -33,7 +33,7 @@ h1 {
 
 }
 
-@media only screen and (max-width: 960px) {
+@media only screen and (device-width: 320px) {
     div#column-container {
         width: 100%;
     }
