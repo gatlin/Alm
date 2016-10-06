@@ -481,6 +481,9 @@
 	want to be able to make assumptions about the target because I'll be getting
 	them exclusively from the browser. I do not know the proper TypeScript-fu yet
 	for expressing this properly.
+
+	[2]: I don't know the typescript way of saying "an object of string literal keys
+	which point to arrays of names. any number of such keys, or none at all."
 	*/
 
 
@@ -495,7 +498,14 @@
 	};
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports) {
 	    "use strict";
-	    /* Permits something akin to traits and automatically derived functions. */
+	    /**
+	     * Permits something akin to traits and automatically derived functions. The
+	     * type receiving the traits must implement stub properties with the correct
+	     * names.
+	     *
+	     * @param derivedCtor - the constructor you want to add traits to.
+	     * @param baseCtors - the parent constructors you wish to inherit traits from.
+	     */
 	    function derive(derivedCtor, baseCtors) {
 	        baseCtors.forEach(function (baseCtor) {
 	            Object.getOwnPropertyNames(baseCtor.prototype).forEach(function (name) {
@@ -504,9 +514,10 @@
 	        });
 	    }
 	    exports.derive = derive;
-	    /* Using `derive` you can get an implementation of flatMap for free by
-	    implementing this class as an interface with a null return value for
-	    flatMap. */
+	    /**
+	     * Using `derive` you can get an implementation of flatMap for free by
+	     * implementing this class as an interface with a null return value for flatMap.
+	     */
 	    var FlatMap = (function () {
 	        function FlatMap() {
 	        }
@@ -530,26 +541,33 @@
 	        return FlatMap;
 	    }());
 	    exports.FlatMap = FlatMap;
-	    /* Utility function to perform some function asynchronously. */
+	    /** Utility function to perform some function asynchronously. */
 	    function async(f) {
 	        setTimeout(f, 0);
 	    }
 	    exports.async = async;
 	    /**
-	    Signals route data through an application.
+	     * Signals route data through an application.
 	    
-	    A signal is a unary function paired with an array of listeners. When a signal
-	    receives a value it computes a result using its function and then sends that to
-	    each of its listeners.
-	    */
+	     * A signal is a unary function paired with an array of listeners. When a signal
+	     * receives a value it computes a result using its function and then sends that
+	     * to each of its listeners.
+	     *
+	     * @constructor
+	     * @param fn - A unary function.
+	     */
 	    var Signal = (function () {
 	        function Signal(fn) {
 	            this.fn = fn;
 	            this.listeners = [];
 	        }
+	        /** Attaches the argument as a listener and then returns the argument. */
 	        Signal.prototype.connect = function (sig) {
 	            this.listeners.push(sig);
 	            return sig;
+	        };
+	        Signal.make = function () {
+	            return new Signal(function (x) { return x; });
 	        };
 	        Signal.prototype.send = function (x) {
 	            var v = this.fn(x);
@@ -560,12 +578,23 @@
 	                }
 	            }
 	        };
-	        Signal.make = function () {
-	            return new Signal(function (x) { return x; });
-	        };
 	        Signal.prototype.recv = function (f) {
 	            this.connect(new Signal(function (v) { return f(v); }));
 	        };
+	        /**
+	         * Creates a new signal
+	         */
+	        Signal.prototype.map = function (f) {
+	            var sig = new Signal(f);
+	            return this.connect(sig);
+	        };
+	        /**
+	         * Creates a new signal which will only propagate a value if a condition
+	         * is met.
+	         *
+	         * @param cond - A unary function returning a boolean.
+	         * @return a new Signal attached as a listener to this Signal.
+	         */
 	        Signal.prototype.filter = function (cond) {
 	            var r = new Signal(function (v) {
 	                if (cond(v)) {
@@ -581,9 +610,6 @@
 	                return state;
 	            });
 	            return this.connect(r);
-	        };
-	        Signal.prototype.map = function (f) {
-	            return this.connect(new Signal(function (v) { return f(v); }));
 	        };
 	        Signal.prototype.done = function () {
 	            return this;

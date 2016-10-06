@@ -114,10 +114,7 @@ export type AppConfig<T> = {
     eventRoot?: HTMLElement | Document | string;
     domRoot?: HTMLElement | string;
     render?: (t: T) => Signal<any, VTree>;
-    ports?: {
-        outbound?: Array<string>;
-        inbound?: Array<string>;
-    };
+    ports?: any; // See [2] at the bottom
     extraEvents?: Array<string>;
 };
 
@@ -228,4 +225,7 @@ export class App<T> {
 want to be able to make assumptions about the target because I'll be getting
 them exclusively from the browser. I do not know the proper TypeScript-fu yet
 for expressing this properly.
+
+[2]: I don't know the typescript way of saying "an object of string literal keys
+which point to arrays of names. any number of such keys, or none at all."
 */
