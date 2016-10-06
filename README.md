@@ -180,8 +180,12 @@ distinct AMD modules in `dist/lib`.
 
 ### The example
 
-An obligatory todo application is available under `example`. To build it, run
-`gulp example` and then `gulp serve`.
+The project website contains an example todo list. Run
+
+    $> gulp docs && gulp serve
+
+and then navigate to `http://localhost:3000/` or
+`http://localhost:3000/todo.html` to see them in action.
 
 License
 ---
