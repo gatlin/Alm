@@ -29,26 +29,18 @@ const app = new alm.App({
     ports: {
         outbound: ['title']
     },
+    state: 0,
+    update: (v, n) => n + (v ? 1 : 0),
+    render: (n) => alm.el('h1', {}, [n.toString()]),
     main: (scope) => {
-        const updates = new alm.Mailbox(false);
-        const state = updates.reduce(0, (action, model) => {
-            if (action) {
-                return model+1;
-            }
-            return model;
-        })
-        .map(n => n.toString());
-
-        scope.events.click.recv(_ => updates.send(true));
+        scope.events.click.recv(_ => scope.actions.send(true));
         state.connect(scope.ports.outbound.title);
-
-        return state.map(n => alm.el('h1', {}, [n]));
     }
 }).start();
 
 app.ports.outbound.title
     .recv(n => {
-        document.title = 'Clicked ' + n + ' times!';
+        document.title = 'Clicked ' + n.toString() + ' times!';
     });
 
         </script>
@@ -56,9 +48,8 @@ app.ports.outbound.title
 </html>
 ```
 
-[Here is that example on codepen.][codepentest]
-
-[Another more involved example is also available on codepen.][codepentodo]
+*I'm not always certain I have properly updated the examples when I bundle a new
+version so let me know if something is wrong!*
 
 How to just include it in your project without hassle
 ---
@@ -72,130 +63,44 @@ on a global variable `alm`. See "Overview" for preliminary documentation.
 Overview
 ---
 
-Alm is a *reactive* library. At a high level you define how external events
-should be transformed into *state changes*, and then how your state should be
-mapped to a *view* and possibly other events.
+Alm is a *reactive* library. With Alm, you define how your application *state*
+should react to events, and how to produce a *view* given your state.
 
-    Events ---> State Changes --> [ State Update ] --> View
-                      ^              |
-                      |              |- new events
-                      +--------------+
+    Events --> State Changes --> [ State Update ] --> View
+       ^                                   |
+       |                                   |- new events (maybe)
+       +-----------------------------------+
 
-A core concept of Alm is that state should be managed in one place. It may
-receive messages from multiple sources and there may be multiple listeners
-waiting for updates. This helps keep applications self-contained and easy to
-maintain.
-
-Below the core concepts are explained: *signals*, *virtual DOMs*, and
-*applications*.
+A network of *signals* is used to transmit data throughout your application.
 
 ### Signals
 
-Events and other messages are transported using *signals*. A signal does not
-contain data of its own. Instead it possesses a *one-argument function* and an
-array of *listeners*. When a signal receives a value it computes a result using
-its function and sends it along to each listener.
+A signal is an object with a `#send` method and a `#recv` method. A signal
+contains an array of listener signals; when you send a value to a signal, a
+result is computed and immediately sent to the listeners.
 
-```javascript
-var signal = new alm.Signal(x => { /* ... */ });
-var signal = alm.Signal.make(); // new Signal(x => x);
-```
+When you call the signal methods like `#map`, `#filter`, and `#reduce` a new
+signal is created, attached as a listener to the callee, and then returned.
 
-You can send values to a signal using `#send` and you can receive them in a
-callback using `#recv`.
+The upshot is that creating a network of signals is very *declarative*, as is
+demonstrated in the synopsis.
 
-```javascript
-signalA.recv(x => signalB.send(x));
-```
+You won't have to know too much about signals to use them properly.
 
-Signals may also be connected using the `#connect` method (returning the
-listener). Other operations such as `#map` and `#filter` implicitly create new
-listeners and return them.
+### The `App`
 
-```javascript
-var signalB = signalA.connect(signalB);
-var signalAPlus2 = signalA.map(x => x + 2);
-```
+When you create a `new alm.App` you must provide it with a configuration
+object. Below are the various options:
 
-An extremely important method is **`#reduce`**. `#reduce` takes two arguments:
-an initial *state* value and a *reducer function.* The reducer function has two
-arguments: an incoming signal value and the old state value.
+- **state** *(required)*: Any value you like (even `null` but it must be
+  *something.*)
 
-```javascript
-var state_manager = updates.reduce(initialState, (action, state) => {
-    /* ... use `action` to create a new state ... */
-    return modifiedState;
-});
+- **update** *(required)*: A two argument function. The function will be given
+  some *action* and the current state, and it must return a *new* state. The
+  action will be something you define (see *Main* below).
 
-var logger = state_manager.recv(x => console.log('state =', x));
-```
-
-**This is idiomatic state management in Alm.** However in practice you'll
-probably want to use a sub-class of signals, *mailboxes.*
-
-#### Mailboxes
-
-`alm.Mailbox` is a sub-class of `alm.Signal`. The key distinction is that
-sending is done *asynchronously*. By sending values asynchronously the browser
-is given a chance to prioritize upcoming tasks and handle them more efficiently.
-
-Mailboxes must also be given an initial value, which is sent when the
-application starts. This value is not stored, but merely sent
-asynchronously.
-
-```javascript
-const Mailbox = alm.Mailbox;
-// The following guarantees at least one action is sent.
-const updates = new Mailbox({ action: 'initial' });
-const state = updates.reduce(initial_model(), (action, model) => {
-    /* use action.type to determine the new model */
-    return modified;
-});
-scope.events.click
-    .filter(evt => evt.getId() === 'the-button')
-    .recv(evt => updates.send({
-        type: 'click',
-        data: evt.getRaw()
-    }));
-```
-
-### Virtual DOM
-
-Signals are how events get into an application; the end product of an
-application is a signal of *virtual DOMs*.
-
-Virtual DOMs are essentially trees with each node containing a tag name, an
-attributes object, and an array of children.
-
-The function `alm.el` is how you create Virtual DOMs:
-
-```javascript
-function render(state) {
-    var el = alm.el;
-    return el('div', { 'id' : 'main' }, [
-        el('h1', {}, [ state.headerText]),
-        el('p', { 'class':'normal-text' }, [state.paragraphText])]);
-}
-```
-
-*NB: This isn't the the most elegant API but it is surprisingly effective. I am
-certainly open to discussion.*
-
-An application, as explained below, produces a signal returning these values. At
-first this might sound bad: the entire view is recomputed on each signal update,
-which is extremely slow.
-
-However `Signal#reduce` once again proves invaluable: with `null` as an initial
-value the old virtual DOM and the new virtual DOM are compared efficiently to
-determine precisely what changes need to be made to the DOM.
-
-Not all applications have views, though. If you configure your application to
-not have a GUI then this step is skipped.
-
-### Application
-
-`alm.App` ties everything together. There are six options you may provide when
-creating a new `App`, one of which is required:
+- **render** *(required if gui is true)*: An argument which will be given a
+  *state* and which must produce a *virtual DOM* (see *Virtual DOM* below).
 
 - **gui** *(optional)*: A boolean declaring whether or not this `App` should
   render a view. *Default: true.*
@@ -214,32 +119,53 @@ creating a new `App`, one of which is required:
   keys: an `outbound` array and an `inbound` array. See "Ports" below for more
   information. *Default: { outbound: null, inbound: null }*.
 
-- **main** *(required)*: a function given a *scope* object which returns a
-  `Signal` of virtual DOMs (or `null`). A scope is an object containing event
-  signals and *ports*.
+- **main** *(required)*: a function given a *scope* object. The scope object
+  contains four keys: `events`, `ports`, `actions`, and `state` (see *Main*
+  below).
 
 - **extraEvents** *(optional)*: An array of any other event names to which the
   `App` should subscribe. *Default: [].*
 
-```javascript
-var app = new alm.App({
-    ports: { outbound: ['title'] },
-    main: (scope) => {
-        var updates = new alm.Mailbox(false);
-        var state = updates.reduce(0, (action, model) => {
-            if (action) return model+1;
-            return model;
-        });
-        scope.events.click.recv(_ => updates.send(true));
-        state.connect(scope.ports.outbound.title);
-        return state.map(n => el('h1', {}, [n.toString()]));
-    }
-}).start();
+When you call the `#start` method, an object is returned with the `ports` as
+well as a signal `state` emitting the state every time it changes.
 
-app.ports.outbound.title.recv(n => {
-    document.title = 'Clicks: ' + n.toString();
-});
-```
+#### Main
+
+The `main` function will be given an object containing
+
+- `events`: an object containing signals for each kind of event you're
+  subscribed too
+- `ports`: signals allowing communication outside the app
+- `actions`: a signal to which you can send state updates
+- `state`: a signal emitting the state whenever it is updated.
+
+The high level goal is to transform data from `events` and `ports` into messages
+which you then send to `actions`.
+
+You cannot manipulate the application state without sending messages to
+`scope.actions`. The `update` function you supplied will be used to create the
+new state.
+
+#### Virtual DOM
+
+Each time your state is updated the `render` function you supplied is
+called. The output of this function should be a *virtual DOM.* A virtual DOM is
+a tree of lightweight objects containing barebones information on the browser
+`document`.
+
+To create a virtual DOM, lm exports a function called `el` which takes three
+arguments and returns a vdom:
+
+- a tag name
+- an object of element attributes
+- an array of either other `el` calls or text.
+
+The third argument is optional for convenience.
+
+It would be extraordinarily inefficient to wipe the page and rerender everything
+every single time the state is updated. Alm instead computes a *diff* between
+the old virtual DOM and the new virtual DOM and only updates the page where
+necessary.
 
 #### Ports
 
@@ -254,10 +180,12 @@ Here is an inbound port example:
 ```javascript
 var app = new alm.App({
     ports: { inbound: ['chats'] },
+    state: /* ... */,
+
     main: (scope) => {
         /* ... */
         scope.ports.inbound
-            .recv(chat => actions.send({
+            .recv(chat => scope.actions.send({
                 type: 'MessageUpdate',
                 data: chat.data
             }));

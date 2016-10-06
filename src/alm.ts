@@ -6,21 +6,25 @@ import {
     HasFlatMap,
     FlatMap,
     derive,
-    Signal
+    Signal,
+    Mailbox
 } from './base';
 
 import { VTree, render } from './vdom';
 
-export type AppDefn = {
+export type AppDefn<T> = {
     gui: boolean | void;
     eventRoot: HTMLElement | Document | string | void;
     domRoot: HTMLElement | string | void;
+    state: T;
+    update: (a: any, m: T) => T;
+    render: (t: T) => Signal<any, VTree> | void;
     ports: {
         outbound: Array<string> | void;
         inbound: Array<string> | void;
     } | void;
     extraEvents: Array<string> | void;
-    main: (t: any) => Signal<any, VTree>;
+    main: (t: any) => void;
 };
 
 /* Wraps system events and provides some convenience methods */
@@ -98,15 +102,18 @@ const standardEvents = [
     'load'
 ];
 
-export class App {
+export class App<T> {
     private gui: boolean;
     private eventRoot: HTMLElement | Document;
     private domRoot: HTMLElement;
     private events: any
-    private main: (t: any) => Signal<any, VTree>;
+    private main: (t: any) => void;
     private ports: any;
+    private state;
+    private update;
+    private render;
 
-    constructor(cfg: AppDefn) {
+    constructor(cfg: AppDefn<T>) {
 
         this.gui = typeof cfg.gui === 'undefined'
             ? true
@@ -134,6 +141,9 @@ export class App {
             : { outbound: null, inbound: null };
 
         this.main = cfg.main;
+        this.state = cfg.state;
+        this.update = cfg.update;
+        this.render = this.gui ? cfg.render : null;
     }
 
     private registerEvent(evtName, sig) {
@@ -142,10 +152,23 @@ export class App {
     }
 
     public start() {
-        const view = this.main({
-            events: this.events,
-            ports: this.ports
+        // Setup the react -> update -> render graph
+        const actions = new Mailbox(null);
+        const updates = actions.reduce(this.state, (action, model) => {
+            if (action === null) {
+                return model;
+            }
+            return this.update(action, model);
         });
+
+        // Let the user wire up any relevant signals
+        this.main({
+            events: this.events,
+            ports: this.ports,
+            actions: actions,
+            state: updates
+        });
+
         /* Find all the event listeners the user cared about and bind those */
         for (let evtName in this.events) {
             let sig = this.events[evtName];
@@ -155,11 +178,13 @@ export class App {
         }
 
         if (this.gui) {
+            const view = updates.map(this.render);
             render(view, this.domRoot);
         }
 
         return {
-            ports: this.ports
+            ports: this.ports,
+            state: updates
         };
     }
 }

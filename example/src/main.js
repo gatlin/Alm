@@ -49,9 +49,6 @@ function new_task(description, id) {
 */
 function update_model(action, model) {
     const dispatch = {};
-    dispatch[Actions.NoOp] = () => {
-        return model;
-    };
 
     dispatch[Actions.Add] = () => {
         if (model.field) {
@@ -176,44 +173,45 @@ function render_model(model) {
 const app = new alm.App({
     domRoot: 'main',
     eventRoot: 'main',
+    state: empty_model(),
+    update: update_model,
+    render: render_model,
     ports: {
         outbound: ['vdom_test']
     },
     main: (scope) => {
-        const actions = new alm.Mailbox({ type: Actions.NoOp });
-        const state = actions.reduce(empty_model(), update_model);
 
         scope.events.change
             .filter(evt => evt.hasClass('toggle'))
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.Complete,
                 content: parseInt(evt.getId().split('-')[2])
             }));
 
         scope.events.click
             .filter(evt => evt.hasClass('delete_button'))
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.Delete,
                 content: parseInt(evt.getId().split('-')[2])
             }));
 
         scope.events.input
             .filter(evt => evt.getId() === 'field')
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.UpdateField,
                 content: evt.getValue()
             }));
 
         scope.events.dblclick
             .filter(evt => evt.hasClass('task_text'))
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.Editing,
                 content: parseInt(evt.getId().split('-')[2])
             }));
 
         scope.events.blur
             .filter(evt => evt.hasClass('editing'))
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.UpdateTask,
                 content: {
                     uid: parseInt(evt.getId().split('-')[2]),
@@ -225,20 +223,18 @@ const app = new alm.App({
               .filter(evt => evt.getRaw().keyCode === 13);
 
         onEnter.filter(evt => evt.getId() === 'field')
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.Add
             }));
 
         onEnter
             .filter(evt => evt.hasClass('editing'))
-            .recv(evt => actions.send({
+            .recv(evt => scope.actions.send({
                 type: Actions.UpdateTask,
                 content: {
                     uid: parseInt(evt.getId().split('-')[2]),
                     text: evt.getValue()
                 }
             }));
-
-        return state.map(render_model);
     }
 }).start();

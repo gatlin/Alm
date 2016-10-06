@@ -94,10 +94,11 @@
 	   Returns: a new model.
 	*/
 	function update_model(action, model) {
-	    const dispatch = {};
-	    dispatch[Actions.NoOp] = () => {
+	    if (action === null) {
 	        return model;
-	    };
+	    }
+
+	    const dispatch = {};
 
 	    dispatch[Actions.Add] = () => {
 	        if (model.field) {
@@ -222,44 +223,45 @@
 	const app = new alm.App({
 	    domRoot: 'main',
 	    eventRoot: 'main',
+	    state: empty_model(),
+	    update: update_model,
+	    render: render_model,
 	    ports: {
 	        outbound: ['vdom_test']
 	    },
 	    main: (scope) => {
-	        const actions = new alm.Mailbox({ type: Actions.NoOp });
-	        const state = actions.reduce(empty_model(), update_model);
 
 	        scope.events.change
 	            .filter(evt => evt.hasClass('toggle'))
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.Complete,
 	                content: parseInt(evt.getId().split('-')[2])
 	            }));
 
 	        scope.events.click
 	            .filter(evt => evt.hasClass('delete_button'))
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.Delete,
 	                content: parseInt(evt.getId().split('-')[2])
 	            }));
 
 	        scope.events.input
 	            .filter(evt => evt.getId() === 'field')
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.UpdateField,
 	                content: evt.getValue()
 	            }));
 
 	        scope.events.dblclick
 	            .filter(evt => evt.hasClass('task_text'))
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.Editing,
 	                content: parseInt(evt.getId().split('-')[2])
 	            }));
 
 	        scope.events.blur
 	            .filter(evt => evt.hasClass('editing'))
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.UpdateTask,
 	                content: {
 	                    uid: parseInt(evt.getId().split('-')[2]),
@@ -271,21 +273,19 @@
 	              .filter(evt => evt.getRaw().keyCode === 13);
 
 	        onEnter.filter(evt => evt.getId() === 'field')
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.Add
 	            }));
 
 	        onEnter
 	            .filter(evt => evt.hasClass('editing'))
-	            .recv(evt => actions.send({
+	            .recv(evt => scope.actions.send({
 	                type: Actions.UpdateTask,
 	                content: {
 	                    uid: parseInt(evt.getId().split('-')[2]),
 	                    text: evt.getValue()
 	                }
 	            }));
-
-	        return state.map(render_model);
 	    }
 	}).start();
 
@@ -385,15 +385,24 @@
 	                ? makePorts(cfg.ports)
 	                : { outbound: null, inbound: null };
 	            this.main = cfg.main;
+	            this.state = cfg.state;
+	            this.update = cfg.update;
+	            this.render = this.gui ? cfg.render : null;
 	        }
 	        App.prototype.registerEvent = function (evtName, sig) {
 	            var fn = function (evt) { return sig.send(evt); };
 	            this.eventRoot.addEventListener(evtName, fn, true);
 	        };
 	        App.prototype.start = function () {
-	            var view = this.main({
+	            // Setup the react -> update -> render graph
+	            var actions = new base_2.Mailbox(null);
+	            var updates = actions.reduce(this.state, this.update);
+	            // Let the user wire up any relevant signals
+	            this.main({
 	                events: this.events,
-	                ports: this.ports
+	                ports: this.ports,
+	                actions: actions,
+	                updates: updates
 	            });
 	            /* Find all the event listeners the user cared about and bind those */
 	            for (var evtName in this.events) {
@@ -403,6 +412,7 @@
 	                }
 	            }
 	            if (this.gui) {
+	                var view = updates.map(this.render);
 	                vdom_2.render(view, this.domRoot);
 	            }
 	            return {
