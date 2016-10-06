@@ -1,0 +1,45 @@
+html, body {
+    padding: 0;
+    margin: 0;
+}
+
+h1 {
+    text-align: center;
+    }
+
+div.app {
+    height: 150px;
+    width: 400px;
+    background-color: #b9b9b9;
+    margin: 0 auto;
+    border: 1px solid black;
+    margin-top: 3px;
+}
+
+div#app-1 p {
+    text-align: center;
+    font-size: 1.5em;
+    font-family: sans-serif;
+    }
+
+div#app-2 {
+    height: 200px;
+    overflow: auto;
+}
+
+div#app-2 h3 {
+    top: 0;
+    height: 20px;
+    }
+
+input#app-2-input {
+    top: 20px;
+    border: 0;
+    width: 398px;
+    height: 30px;
+
+    margin: 0 auto;
+}
+
+ul#app-2-tasks {
+}
