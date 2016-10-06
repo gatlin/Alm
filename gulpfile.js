@@ -29,13 +29,23 @@ gulp.task('bundle', ['js'], function() {
 });
 
 gulp.task('example', ['js'], function() {
-    return gulp.src('./example/src/main.js')
+    return gulp.src('./docs/js/src/todo.js')
+        .pipe(gulpWebpack({
+            output: {
+                filename: 'todo.js'
+            }
+        }))
+        .pipe(gulp.dest('./docs/js/dist/'));
+});
+
+gulp.task('docs', ['example'], function() {
+    return gulp.src('./docs/js/src/main.js')
         .pipe(gulpWebpack({
             output: {
                 filename: 'main.js'
             }
         }))
-        .pipe(gulp.dest('./example/dist/'));
+        .pipe(gulp.dest('./docs/js/dist/'));
 });
 
-gulp.task('serve', serve('./example/'));
+gulp.task('serve', serve('./docs/'));
