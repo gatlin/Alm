@@ -8,7 +8,8 @@ Synopsis
 
 Alm helps you build organized and efficient web applications.
 
-[Here is an example todo list app on codepen][codepentodo].
+[Here is an example todolist app][todoexample]. The source is under
+`docs/js/src/todo.js`.
 
 *I'm not always certain I have properly updated the examples when I bundle a new
 version so let me know if something is wrong!*
@@ -206,5 +207,4 @@ Feel free to email me at <gatlin@niltag.net> or use the GitHub Issue tracker.
 [typescript]: https://typescriptlang.org
 [amd]: http://requirejs.org/docs/whyamd.html
 [gulp]: http://gulpjs.com/
-[codepentest]: http://codepen.io/askeletism/pen/BLmGrk
-[codepentodo]: http://codepen.io/askeletism/pen/YGYvJO
+[todoexample]: http://niltag.net/Alm/todo.html
