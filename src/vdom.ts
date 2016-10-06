@@ -10,21 +10,37 @@ different algorithm.
 Rather than actually compute a set of patches and then apply them in two phases,
 this algorithm computes patches and then applies them immediately.
 
-See the `diff` function for a super fun algorithmic discussion.
+See the `diff_*` functions for a super fun algorithmic discussion.
 */
+
+// Helper exported at top level for creating vdom trees.
+export function el(tag: string, attrs: any, children: Array<any>) {
+    const children_trees = (typeof children === 'undefined')
+        ? []
+        : children.map((kid, idx) => {
+            return typeof kid === 'string'
+                ? new VTree(kid, [], VTreeType.Text)
+                : kid;
+
+        });
+
+    return new VTree({
+        tag: tag,
+        attrs: attrs
+    }, children_trees, VTreeType.Node);
+}
 
 enum VTreeType {
     Text,
     Node
 };
 
-// exported only to `alm.ts`
+// exported only to `alm.ts`. This is our tree representation.
 export class VTree {
     public content: any;
     public children: Array<VTree>;
     public treeType: VTreeType;
-    public key: any;
-    private domRoot;
+    public key: string;
     private mailbox: Mailbox<any>;
 
     constructor(content, children, treeType) {
@@ -57,47 +73,47 @@ export class VTree {
     }
 
     eq(other: VTree): boolean {
-        const me = this;
         if (!other) {
             return false;
         }
-        if (me.key === null || other.key === null) {
-            return false;
-        }
-        return (me.key === other.key);
+        return (this.key === other.key);
     }
 
-    static makeDOMNode(tree): any {
-        if (tree === null) { return null; }
-        if (tree.treeType === VTreeType.Text) {
-            return document.createTextNode(tree.content);
-        }
-        const el = document.createElement(tree.content.tag);
 
-        for (let key in tree.content.attrs) {
-            el.setAttribute(key, tree.content.attrs[key]);
-        }
+}
 
-        for (let i = 0; i < tree.children.length; i++) {
-            const child = VTree.makeDOMNode(tree.children[i]);
-            el.appendChild(child);
-        }
+// Construct an actual DOM node from a VTree.
+function makeDOMNode(tree): any {
+    if (tree === null) { return null; }
+    if (tree.treeType === VTreeType.Text) {
+        return document.createTextNode(tree.content);
+    }
+    const el = document.createElement(tree.content.tag);
 
-        if (tree.mailbox !== null) {
-            tree.mailbox.send(el);
-        }
-
-        return el;
+    for (let key in tree.content.attrs) {
+        el.setAttribute(key, tree.content.attrs[key]);
     }
 
-    static initialDOM(tree, domRoot) {
-        const root = domRoot;
-        const domTree = VTree.makeDOMNode(tree);
-        while (root.firstChild) {
-            root.removeChild(root.firstChild);
-        }
-        root.appendChild(domTree);
+    for (let i = 0; i < tree.children.length; i++) {
+        const child = makeDOMNode(tree.children[i]);
+        el.appendChild(child);
     }
+
+    // if a mailbox was subscribed, notify it the element was re-rendered
+    if (tree.mailbox !== null) {
+        tree.mailbox.send(el);
+    }
+
+    return el;
+}
+
+function initialDOM(domRoot, tree) {
+    const root = domRoot;
+    const domTree = makeDOMNode(tree);
+    while (root.firstChild) {
+        root.removeChild(root.firstChild);
+    }
+    root.appendChild(domTree);
 }
 
 enum Op {
@@ -179,7 +195,7 @@ function diff_dom(parent, a, b, index = 0) {
 
     if (typeof a === 'undefined' || a === null) {
         parent.insertBefore(
-            VTree.makeDOMNode(b),
+            makeDOMNode(b),
             parent.childNodes[index]);
         return;
     }
@@ -232,11 +248,12 @@ function diff_dom(parent, a, b, index = 0) {
                 }
             }
         }
+
     } else {
         // different types of nodes, `b` is a text node, or they have different
         // tags. in all cases just replace the DOM element.
         parent.replaceChild(
-            VTree.makeDOMNode(b),
+            makeDOMNode(b),
             parent.childNodes[index]);
     }
 }
@@ -244,12 +261,8 @@ function diff_dom(parent, a, b, index = 0) {
 // exported only to `alm.ts`
 export function render(view_signal, domRoot) {
     view_signal.reduce(null, (update, tree) => {
-        // Set a default key for the root node
-        if (update.key === null) {
-            update.key = 'root';
-        }
         if (tree === null) {
-            VTree.initialDOM(update, domRoot);
+            initialDOM(domRoot, update);
         } else {
 
             diff_dom(domRoot, tree, update);
@@ -257,21 +270,4 @@ export function render(view_signal, domRoot) {
         }
         return update;
     });
-}
-
-/*** EXPORTED AT TOP LEVEL ***/
-export function el(tag: string, attrs: any, children: Array<any>) {
-    const children_trees = (typeof children === 'undefined')
-        ? []
-        : children.map((kid, idx) => {
-            return typeof kid === 'string'
-                ? new VTree(kid, [], VTreeType.Text)
-                : kid;
-
-        });
-
-    return new VTree({
-        tag: tag,
-        attrs: attrs
-    }, children_trees, VTreeType.Node);
 }
