@@ -49,28 +49,51 @@
 	const alm = __webpack_require__(1),
 	      el = alm.el;
 
+	function rando(min,max) {
+	    return Math.floor(Math.random() * (max - min) + min);
+	}
+
 	const app1 = new alm.App({
 	    eventRoot: 'app-1',
-	    ports: {
-	        outbound: ['title']
+	    domRoot: 'app-1',
+	    state: {
+	        words: ['ｗｏａｈ','ｗａｖｙ','ｔｕｂｕｌａｒ'],
+	        which: 0
 	    },
-	    state: 0,
-	    update: (n, total) => total + (n ? 1 : 0),
-	    gui: false,
-	    main: (scope) => {
-	        scope.events
-	            .click
-	            .connect(scope.actions);
-
-	        scope.state
-	            .map(n => n.toString())
-	            .connect(scope.ports.outbound.title);
+	    update: (_, state) => {
+	        state.which = rando(0, state.words.length);
+	        return state;
+	    },
+	    render: state => el('div', {}, [
+	        el('p', {}, ['Click anywhere in this box for a random word']),
+	        el('p', {'class':'aesthetic'}, [ state.words[state.which]])
+	    ]),
+	    main: scope => {
+	        scope.events.click.connect(scope.actions);
 	    }
 	}).start();
 
-	app1.ports.outbound.title.recv(n => {
-	    document.title = (n ? '('+n+') ' : '') + 'Alm';
-	});
+	function renderTasks(state) {
+	    const input = el('input', {
+	        'type': 'text',
+	        'id':'app-2-input',
+	        'placeholder':'Type something here go ahead'
+	    });
+
+	    const tasks_list = Object.keys(state.tasks)
+	          .map(taskId => {
+	              return el('li', {
+	                  'id':'app-2-task-'+taskId,
+	                  'class':'app-2-task'
+	              }, [state.tasks[taskId]]);
+	          });
+
+	    return el('div', {}, [
+	        input,
+	        el('p', {}, ['Click on an item to delete it']),
+	        el('ul', { 'id':'app-2-tasks' }, tasks_list)
+	    ]);
+	}
 
 	const app2 = new alm.App({
 	    eventRoot: 'app-2',
@@ -88,27 +111,7 @@
 	        return model;
 	    },
 
-	    render: (state) => {
-	        const inp = el('input', {
-	            'type': 'text',
-	            'id': 'app-2-input',
-	            'placeholder':'Type a reminder here'
-	        });
-
-	        const tasks_list =
-	              el('ul', { 'id':'app-2-tasks'},
-	                 Object.keys(state.tasks).map(taskId => el('li', {
-	                     'id':'app-2-task-'+taskId.toString(),
-	                     'class':'app-2-task'
-	                 }, [state.tasks[taskId]])));
-
-	        return el('div', { 'id':'app-2-main' }, [
-	            el('h3', {}, ['Simple Reminder List']),
-	            inp,
-	            el('p', {}, ['Click on a reminder to delete it']),
-	            tasks_list
-	        ]);
-	    },
+	    render: renderTasks,
 
 	    main: (scope) => {
 	        scope.events.keydown
@@ -247,9 +250,21 @@
 	            this.ports = typeof cfg.ports !== 'undefined'
 	                ? makePorts(cfg.ports)
 	                : { outbound: null, inbound: null };
-	            this.main = cfg.main;
-	            this.state = cfg.state;
-	            this.update = cfg.update;
+	            // create the signal graph
+	            var actions = new base_2.Mailbox(null);
+	            var state = actions.reduce(cfg.state, function (action, model) {
+	                if (action === null) {
+	                    return model;
+	                }
+	                return cfg.update(action, model);
+	            });
+	            this.scope = Object.seal({
+	                events: this.events,
+	                ports: this.ports,
+	                actions: actions,
+	                state: state
+	            });
+	            cfg.main(this.scope);
 	            this.render = this.gui ? cfg.render : null;
 	        }
 	        /**
@@ -261,28 +276,21 @@
 	            this.eventRoot.addEventListener(evtName, fn, true);
 	        };
 	        /**
-	         * This method actually creates the signal graph and sets up the event ->
-	         * update -> render pipeline.
+	         * Provides access to the application scope for any other configuration.
+	         *
+	         * @param f - A function which accepts a scope and returns nothing.
+	         * @return @this
+	         */
+	        App.prototype.editScope = function (cb) {
+	            cb(this.scope);
+	            return this;
+	        };
+	        /**
+	         * This method actually registers the desired events and creates the ports.
 	         * @return An object containing the App's port signals and a state update
 	         * signal.
 	         */
 	        App.prototype.start = function () {
-	            var _this = this;
-	            // Setup the react -> update -> render graph
-	            var actions = new base_2.Mailbox(null);
-	            var updates = actions.reduce(this.state, function (action, model) {
-	                if (action === null) {
-	                    return model;
-	                }
-	                return _this.update(action, model);
-	            });
-	            // Let the user wire up any relevant signals
-	            this.main({
-	                events: this.events,
-	                ports: this.ports,
-	                actions: actions,
-	                state: updates
-	            });
 	            /* Find all the event listeners the user cared about and bind those */
 	            for (var evtName in this.events) {
 	                var sig = this.events[evtName];
@@ -291,12 +299,12 @@
 	                }
 	            }
 	            if (this.gui) {
-	                var view = updates.map(this.render);
+	                var view = this.scope.state.map(this.render);
 	                vdom_2.render(view, this.domRoot);
 	            }
 	            return {
-	                ports: this.ports,
-	                state: updates
+	                ports: this.scope.ports,
+	                state: this.scope.state
 	            };
 	        };
 	        return App;
@@ -555,7 +563,7 @@
 	                }
 	            }
 	            else {
-	                this.key = this.content;
+	                this.key = 'text-node';
 	            }
 	        }
 	        /**

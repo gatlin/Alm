@@ -420,9 +420,21 @@
 	            this.ports = typeof cfg.ports !== 'undefined'
 	                ? makePorts(cfg.ports)
 	                : { outbound: null, inbound: null };
-	            this.main = cfg.main;
-	            this.state = cfg.state;
-	            this.update = cfg.update;
+	            // create the signal graph
+	            var actions = new base_2.Mailbox(null);
+	            var state = actions.reduce(cfg.state, function (action, model) {
+	                if (action === null) {
+	                    return model;
+	                }
+	                return cfg.update(action, model);
+	            });
+	            this.scope = Object.seal({
+	                events: this.events,
+	                ports: this.ports,
+	                actions: actions,
+	                state: state
+	            });
+	            cfg.main(this.scope);
 	            this.render = this.gui ? cfg.render : null;
 	        }
 	        /**
@@ -434,28 +446,21 @@
 	            this.eventRoot.addEventListener(evtName, fn, true);
 	        };
 	        /**
-	         * This method actually creates the signal graph and sets up the event ->
-	         * update -> render pipeline.
+	         * Provides access to the application scope for any other configuration.
+	         *
+	         * @param f - A function which accepts a scope and returns nothing.
+	         * @return @this
+	         */
+	        App.prototype.editScope = function (cb) {
+	            cb(this.scope);
+	            return this;
+	        };
+	        /**
+	         * This method actually registers the desired events and creates the ports.
 	         * @return An object containing the App's port signals and a state update
 	         * signal.
 	         */
 	        App.prototype.start = function () {
-	            var _this = this;
-	            // Setup the react -> update -> render graph
-	            var actions = new base_2.Mailbox(null);
-	            var updates = actions.reduce(this.state, function (action, model) {
-	                if (action === null) {
-	                    return model;
-	                }
-	                return _this.update(action, model);
-	            });
-	            // Let the user wire up any relevant signals
-	            this.main({
-	                events: this.events,
-	                ports: this.ports,
-	                actions: actions,
-	                state: updates
-	            });
 	            /* Find all the event listeners the user cared about and bind those */
 	            for (var evtName in this.events) {
 	                var sig = this.events[evtName];
@@ -464,12 +469,12 @@
 	                }
 	            }
 	            if (this.gui) {
-	                var view = updates.map(this.render);
+	                var view = this.scope.state.map(this.render);
 	                vdom_2.render(view, this.domRoot);
 	            }
 	            return {
-	                ports: this.ports,
-	                state: updates
+	                ports: this.scope.ports,
+	                state: this.scope.state
 	            };
 	        };
 	        return App;
@@ -728,7 +733,7 @@
 	                }
 	            }
 	            else {
-	                this.key = this.content;
+	                this.key = 'text-node';
 	            }
 	        }
 	        /**

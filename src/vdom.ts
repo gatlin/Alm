@@ -75,7 +75,7 @@ export class VTree {
             }
         }
         else {
-            this.key = this.content;
+            this.key = 'text-node';
         }
     }
 
