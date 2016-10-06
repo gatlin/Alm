@@ -115,7 +115,7 @@ called. The output of this function should be a *virtual DOM.* A virtual DOM is
 a tree of lightweight objects containing barebones information on the browser
 `document`.
 
-To create a virtual DOM, lm exports a function called `el` which takes three
+To create a virtual DOM, Alm exports a function called `el` which takes three
 arguments and returns a vdom:
 
 - a tag name

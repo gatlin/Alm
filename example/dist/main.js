@@ -94,10 +94,6 @@
 	   Returns: a new model.
 	*/
 	function update_model(action, model) {
-	    if (action === null) {
-	        return model;
-	    }
-
 	    const dispatch = {};
 
 	    dispatch[Actions.Add] = () => {
@@ -394,15 +390,21 @@
 	            this.eventRoot.addEventListener(evtName, fn, true);
 	        };
 	        App.prototype.start = function () {
+	            var _this = this;
 	            // Setup the react -> update -> render graph
 	            var actions = new base_2.Mailbox(null);
-	            var updates = actions.reduce(this.state, this.update);
+	            var updates = actions.reduce(this.state, function (action, model) {
+	                if (action === null) {
+	                    return model;
+	                }
+	                return _this.update(action, model);
+	            });
 	            // Let the user wire up any relevant signals
 	            this.main({
 	                events: this.events,
 	                ports: this.ports,
 	                actions: actions,
-	                updates: updates
+	                state: updates
 	            });
 	            /* Find all the event listeners the user cared about and bind those */
 	            for (var evtName in this.events) {
@@ -416,7 +418,8 @@
 	                vdom_2.render(view, this.domRoot);
 	            }
 	            return {
-	                ports: this.ports
+	                ports: this.ports,
+	                state: updates
 	            };
 	        };
 	        return App;
