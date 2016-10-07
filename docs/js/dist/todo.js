@@ -367,6 +367,15 @@
 	     *                          arrays and whose values are signals.
 	     */
 	    function makePorts(portCfg) {
+	        // If it is simply an array then make ports for each string
+	        if (Array.isArray(portCfg)) {
+	            var _ports = {};
+	            for (var i = 0; i < portCfg.length; i++) {
+	                var portName = portCfg[i];
+	                _ports[portName] = base_2.Signal.make();
+	            }
+	            return _ports;
+	        }
 	        var ports = (typeof portCfg === 'undefined' || portCfg === null)
 	            ? { outbound: [], inbound: [] }
 	            : portCfg;
@@ -417,9 +426,7 @@
 	                ? cfg.extraEvents
 	                : []);
 	            this.events = makeEvents(events);
-	            this.ports = typeof cfg.ports !== 'undefined'
-	                ? makePorts(cfg.ports)
-	                : { outbound: null, inbound: null };
+	            this.ports = makePorts(cfg.ports);
 	            // create the signal graph
 	            var actions = new base_2.Mailbox(null);
 	            var state = actions.reduce(cfg.state, function (action, model) {

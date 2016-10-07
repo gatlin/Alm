@@ -11,7 +11,7 @@ h2 {
     margin-top: 0;
 }
 
-span.lit {
+span.lit, code {
     font-family: monospace;
     font-size: 1.1em;
 }
@@ -93,11 +93,6 @@ div.app {
     margin-top: 10px;
 }
 
-div#app-1 {
-    border: 1px solid #b9b9b9;
-    padding: 5px;
-}
-
 p.aesthetic {
     text-align: center;
     font-size: 24pt;
@@ -106,4 +101,13 @@ p.aesthetic {
 
 p.explain, p.explain ul,  p.explain li {
     margin-right: 10px;
+}
+
+p.warning {
+    color: red;
+}
+
+textarea#text-event {
+    width: 100%;
+    border: 1px solid #b9b9b9;
 }

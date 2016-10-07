@@ -4,7 +4,7 @@ const alm = require('../../../dist/lib/alm.js'),
       el = alm.el;
 
 /* A simple counter */
-const app1 = new alm.App({
+const counterApp = new alm.App({
     state: 0,
     update: (action, num) => num + (action ? 1 : -1),
     main: scope => {
@@ -24,39 +24,60 @@ const app1 = new alm.App({
                 el('button', { 'id':'down-btn' }, ['-1'])
             ])
         ]),
-    eventRoot: 'app-1',
-    domRoot: 'app-1'
+    eventRoot: 'counter-app',
+    domRoot: 'counter-app'
 }).start();
 
-const app2 = new alm.App({
-    state: '#ffffff',
-    update: (value, state) => value,
-    ports: {
-        outbound: ['background']
+const eventApp = new alm.App({
+    state: { count: 0, overLimit: false },
+    update: (text, state) => {
+        state.count = text.length;
+        state.overLimit = state.count > 140;
+        return state;
     },
     main: scope => {
         scope.events.input
+            .filter(evt => evt.getId() === 'text-event')
+            .recv(evt => scope.actions.send(evt.getValue()));
+    },
+    render: state =>
+        el('div', {}, [
+            el('textarea', { 'id': 'text-event' }),
+            el('p', {
+                'id':'limit-text',
+                'class': state.overLimit ? 'warning' : ''
+            }, [state.count.toString() + ' / 140 characters'])
+        ]),
+    eventRoot: 'event-app',
+    domRoot: 'event-app'
+}).start();
+
+const colorApp = new alm.App({
+    state: '#ffffff',
+    update: (value, color) => value,
+    ports: ['background'],
+    main: scope => {
+        scope.events.input
             .filter(evt => evt.getId() === 'app2-color')
-            .recv(evt => scope.actions.send(
-                evt.getRaw().target.value));
+            .recv(evt => scope.actions.send(evt.getValue()));
 
         scope.events.click
             .filter(evt => evt.getId() === 'app2-reset')
             .recv(_ => scope.actions.send('#ffffff'));
 
-        scope.state.connect(scope.ports.outbound.background);
+        scope.state.connect(scope.ports.background);
     },
-    render: state =>
+    render: color =>
         el('span', {}, [
             el('input', { 'type':'color',
                           'id':'app2-color',
-                          'value':state }),
+                          'value':color }),
             el('button', { 'id':'app2-reset' }, ['Reset'])
         ]),
-    eventRoot: 'app-2',
-    domRoot: 'app-2'
+    eventRoot: 'color-app',
+    domRoot: 'color-app'
 }).start();
 
-app2.ports.outbound.background.recv(color => {
+colorApp.ports.background.recv(color => {
     document.body.style.backgroundColor = color;
 });

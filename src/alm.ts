@@ -75,31 +75,29 @@ function makeEvents(evts) {
  *                          arrays and whose values are signals.
  */
 function makePorts(portCfg) {
+    // If it is simply an array then make ports for each string
+    if (Array.isArray(portCfg)) {
+        const _ports = {};
+        for (let i = 0; i < portCfg.length; i++) {
+            const portName = portCfg[i];
+            _ports[portName] = Signal.make();
+        }
+        return _ports;
+    }
+
     let ports = (typeof portCfg === 'undefined' || portCfg === null)
         ? { outbound: [], inbound: [] }
         : portCfg;
 
-    if (typeof ports === 'array') {
-        const _ports = {};
-        for (let i = 0; i < ports.length; i++) {
-            const portName = ports[i];
-            _ports[portName] = Signal.make();
+    for (let key in ports) {
+        const portNames = ports[key];
+        const portSpace = {};
+        for (let i = 0; i < portNames.length; i++) {
+            const portName = portNames[i];
+            portSpace[portName] = Signal.make();
         }
-        ports = _ports;
+        ports[key] = portSpace;
     }
-    else {
-
-        for (let key in ports) {
-            const portNames = ports[key];
-            const portSpace = {};
-            for (let i = 0; i < portNames.length; i++) {
-                const portName = portNames[i];
-                portSpace[portName] = Signal.make();
-            }
-            ports[key] = portSpace;
-        }
-    }
-
     return ports;
 }
 
@@ -169,9 +167,7 @@ export class App<T> {
             : []);
 
         this.events = makeEvents(events);
-        this.ports = typeof cfg.ports !== 'undefined'
-            ? makePorts(cfg.ports)
-            : { outbound: null, inbound: null };
+        this.ports = makePorts(cfg.ports);
 
         // create the signal graph
         const actions = new Mailbox(null);

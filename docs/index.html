@@ -22,8 +22,8 @@
                         href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its
                         code</a>.</p>
                 <p class="lead">
-                    This page is a simple tutorial showing a few small apps and
-                    how they work and can grow maintainably thanks to Alm.
+                    This page is a gallery of simple examples showcasing the
+                    main features and principles of Alm.
                 </p>
                 <p class="lead">If you have any questions or comments or free
                     money don't hesitate to reach me at
@@ -31,7 +31,7 @@
             </div>
             <div class="row">
                 <div class="explanation">
-                    <h2>Simple example: a little counter.</h2>
+                    <h2>Getting started: a simple counter.</h2>
                     <p class="explain">
                         An <span class="lit">App</span> asks for the following
                         right up front:
@@ -40,7 +40,7 @@
                             <li>How to take an <em>action</em> and a state to
                                 <strong>update</strong> it;</li>
                             <li>How to transform browser <em>events</em> into
-                                <em>actions</em>;</li>
+                                <em>actions</em> (<strong>main</strong>);</li>
                             <li>How to <strong>render</strong> the view given a
                                 <em>state</em>;</li>
                             <li>Where in the <em>document hierarchy</em> to
@@ -48,32 +48,37 @@
                         </ul>
                     </p>
                     <p class="explain">
-                        The <span class="lit">alm.el</span> function is how you
-                        specify your view. It takes a tag name, an object of
-                        element properties, and an array of children. If a child
-                        is a <strong>string</strong> it will become a text node.
+                        Your application <strong>state</strong> is kept inside
+                        the <code>App</code>. In <strong>main</strong> you
+                        specify how to turn <em>signals</em> of events into
+                        actions, which you then send to the special
+                        <code>scope.actions</code> signal.
                     </p>
                     <p class="explain">
-                        The <span class="lit">main</span> function connects
-                        <em>events</em> and other <em>signals</em>, ultimately
-                        sending messages to
-                        <span class="lit">scope.actions</span>. Messages can be
-                        whatever you want - after all, you're going to be
-                        receiving them in
-                        <span class="lit">update</span>!
+                        Actions are then forwarded to your
+                        <strong>update</strong> function, where you are given
+                        both the action and the old state. Your task is to
+                        return a <em>new</em> state.
+                    </p>
+                    <p class="explain">
+                        Your state is then passed to your
+                        <strong>render</strong> function to produce a
+                        <em>virtual DOM</em>. A fancy algorithm turns this into
+                        a set of changes to make to the <strong>real
+                            DOM</strong> and then your view is updated.
                     </p>
                     <p class="explain">
                         <strong>Signals</strong> are how data flows through your
-                        app. An important one is the <em>port</em>.
+                        app.
                     </p>
                 </div>
                 <div class="example" id="src-1">
-                    <div id="app-1" class="app"></div>
+                    <div id="counter-app" class="app"></div>
                     <pre>
                         <code>
 /* A simple counter */
 const el = alm.el;
-const app1 = new alm.App({
+const counterApp = new alm.App({
     state: 0,
     update: (action, num) => num + (action ? 1 : -1),
     main: scope => {
@@ -93,8 +98,8 @@ const app1 = new alm.App({
                 el('button', { 'id':'down-btn' }, ['-1'])
             ])
         ]),
-    eventRoot: 'app-1',
-    domRoot: 'app-1'
+    eventRoot: 'counter-app',
+    domRoot: 'counter-app'
 }).start();
                         </code>
                     </pre>
@@ -102,54 +107,141 @@ const app1 = new alm.App({
             </div><!-- row -->
             <div class="row">
                 <div class="explanation">
-                    <h2>A colorful port example</h2>
+                    <h2>Events!</h2>
                     <p class="explain">
-                        You can communicate outside your
-                        <span class="lit">App</span> using <em>ports</em>. You
-                        can specify them using the
-                        <span class="lit">ports</span> property.
+                        When you create your <code>App</code> a number of
+                        default event signals are created and given to you via
+                        the <em>scope</em> argument to your <code>main</code>
+                        function. When your app finally <code>start</code>s up
+            only those events you actually subscribed to will actually be
+            registered.
                     </p>
                     <p class="explain">
-                        
+                        Events are communicated via <em>signals</em>. Signals
+            are really the foundation of Alm but you don't have to know a whole
+            lot to use them effectively.
+                    </p>
+                    <p class="explain">
+                        You can <strong>send</strong> values to signals using
+                        the <code>#send</code> method or
+                        <strong>receive</strong> values using the
+                        <code>#recv</code> method. You may also
+                        <code>#connect</code> them in this manner,
+                        <code>#map</code> a function over them,
+                        <code>#filter</code> out values that don't pass a
+            condition, or even <code>#reduce</code> them with a function and
+                        some initial value, just like with <code>Array</code>s.
+                    </p>
+                    <p class="explain">
+                        The <code>#map</code>, <code>#filter</code>,
+            <code>#connect</code>, and <code>#reduce</code> methods all return a
+            brand new signal than the one whose method you called. (In the case
+            of connect, it returns the argument). This means wiring signals
+            together is very <strong>declarative</strong>.
                     </p>
                 </div>
                 <div class="example">
-                    <div id="app-2" class="app"></div>
+                    <div id="event-app" class="app"></div>
                     <pre><code>
-const app2 = new alm.App({
-    state: '#ffffff',
-    update: (value, state) => value,
-    ports: {
-        outbound: ['background']
+const eventApp = new alm.App({
+    state: { count: 0, overLimit: false },
+    update: (text, state) => {
+        state.count = text.length;
+        state.overLimit = state.count > 140;
+        return state;
     },
     main: scope => {
         scope.events.input
+            .filter(evt => evt.getId() === 'text-event')
+            .recv(evt => scope.actions.send(evt.getValue()));
+    },
+    render: state =>
+        el('div', {}, [
+            el('textarea', { 'id': 'text-event' }),
+            el('p', {
+                'id':'limit-text',
+                'class': state.overLimit ? 'warning' : ''
+            }, [state.count.toString() + ' / 140 characters'])
+        ]),
+    eventRoot: 'event-app',
+    domRoot: 'event-app'
+}).start();
+                    </code></pre>
+                </div>
+            </div><!-- row -->
+            <div class="row">
+                <div class="explanation">
+                    <h2>A colorful port example</h2>
+                    <p class="explain">
+                        You can communicate outside your
+                        <span class="lit">App</span> using <em>port</em>
+            signals. Ports are specified with the
+                        <span class="lit">ports</span> property. You can provide
+                        an array of names, or you can provide an object whose
+                        keys are themselves arrays of port names. Eg,
+                        <pre><code>
+ports: ['port1','port2']
+                        </code></pre>
+                        or
+                        <pre><code>
+ports: {
+  outbound: ['out1'],
+  inbound: ['in1','in2']
+}
+                        </code></pre>
+                    </p>
+                    <p class="explain">
+                        The ports created by your app are part of the object
+                        returned by <code>App#start</code>. As with other
+                        signals you can either <code>send</code> them values or
+            <code>recv</code> values from them.
+                    </p>
+                </div>
+                <div class="example">
+                    <div id="color-app" class="app"></div>
+                    <pre><code>
+const colorApp = new alm.App({
+    state: '#ffffff',
+    update: (value, color) => value,
+    ports: ['background'],
+    main: scope => {
+        scope.events.input
             .filter(evt => evt.getId() === 'app2-color')
-            .recv(evt => scope.actions.send(
-                evt.getRaw().target.value));
+            .recv(evt => scope.actions.send(evt.getValue()));
 
         scope.events.click
             .filter(evt => evt.getId() === 'app2-reset')
             .recv(_ => scope.actions.send('#ffffff'));
 
-        scope.state.connect(scope.ports.outbound.background);
+        scope.state.connect(scope.ports.background);
     },
-    render: state =>
+    render: color =>
         el('span', {}, [
             el('input', { 'type':'color',
                           'id':'app2-color',
-                          'value':state }),
+                          'value':color }),
             el('button', { 'id':'app2-reset' }, ['Reset'])
         ]),
-    eventRoot: 'app-2',
-    domRoot: 'app-2'
+    eventRoot: 'color-app',
+    domRoot: 'color-app'
 }).start();
 
-app2.ports.outbound.background.recv(color => {
+colorApp.ports.background.recv(color => {
     document.body.style.backgroundColor = color;
 });
                     </code></pre>
                 </div>
+            </div><!-- row -->
+            <div class="row">
+                <p class="lead">There are certainly more examples to come but
+                    this should be a pretty good start to understanding what Alm
+                    is all about.</p>
+                <p class="lead">Check out <a
+                                              href="https://github.com/gatlin/Alm">GitHub
+    repository</a> for instructions on how to get, use, or rebuild Alm. If you
+    have any questions or comments don't hesitate to <a
+                                                         href="mailto:gatlin@niltag.net">email
+    me</a>.
             </div><!-- row -->
         </div>
         <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/highlight.min.js"></script>
