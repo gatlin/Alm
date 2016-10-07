@@ -204,6 +204,32 @@ export class App<T> {
     }
 
     /**
+     * Set the root element in the page to which we will attach listeners.
+     * @param er - Either an HTML element, the whole document, or an element ID
+     *             as a string.
+     * @return @this
+     */
+    public setEventRoot(er: HTMLElement | Document | string): this {
+        this.eventRoot = typeof er === 'string'
+            ? document.getElementById(er)
+            : er;
+        return this;
+    }
+
+    /**
+     * Set the root element in the page in which we will render.
+     * @param er - Either an HTML element, the whole document, or an element ID
+     *             as a string.
+     * @return @this
+     */
+    public setDomRoot(dr: HTMLElement | string): this {
+        this.domRoot = typeof dr === 'string'
+            ? document.getElementById(dr)
+            : dr;
+        return this;
+    }
+
+    /**
      * This method actually registers the desired events and creates the ports.
      * @return An object containing the App's port signals and a state update
      * signal.
