@@ -78,9 +78,10 @@ object. Below are the various options:
     document.body.*
 
 - **ports** *(optional)*: Ports are signals which will be made available outside
-  of the `App` to facilitate interop with other code. It is an object with two
-  keys: an `outbound` array and an `inbound` array. See "Ports" below for more
-  information. *Default: { outbound: null, inbound: null }*.
+  of the `App` to facilitate interop with other code. You may either specify an
+  array of strings (eg `['port1','port2']`) or an object of named arrays to
+  maintain separate namespaces (eg `{ outbound: ['out'], inbound: ['in'] }`).
+  *Default: null*.
 
 - **main** *(required)*: a function given a *scope* object. The scope object
   contains four keys: `events`, `ports`, `actions`, and `state` (see *Main*
