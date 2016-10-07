@@ -19,7 +19,7 @@
                     <a href="todo.html">a more involved, obligatory todo list
                         app</a> as well as
                     <a
-                        href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its
+                        href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its    
                         code</a>.</p>
                 <p class="lead">
                     Alm's purpose is to help <em>organize</em> your web
@@ -70,8 +70,8 @@
                             DOM</strong> and then your view is updated.
                     </p>
                     <p class="explain">
-                        <strong>Signals</strong> are how data flows through your
-                        app.
+                        <a href="#signals"><strong>Signals</strong></a> are how
+                        data flows through your app.
                     </p>
                 </div>
                 <div class="example" id="src-1">
@@ -107,13 +107,12 @@ const counterApp = new alm.App({
                     </pre>
                 </div>
             </div><!-- row -->
+
             <div class="row">
                 <div class="explanation">
                     <h2>Events!</h2>
                     <p class="explain">
-                        Events are communicated via <em>signals</em>. Signals
-                        are really the foundation of Alm but you don't have to know a whole
-                        lot to use them effectively.
+                        Events are communicated via <em>signals</em>.
                     </p>
                     <p class="explain">
                         When you create your <code>App</code> a number of
@@ -124,22 +123,12 @@ const counterApp = new alm.App({
             registered.
                     </p>
                     <p class="explain">
-                        You can <strong>send</strong> values to signals using
-                        the <code>#send</code> method or
-                        <strong>receive</strong> values using the
-                        <code>#recv</code> method. You may also
-                        <code>#connect</code> them in this manner,
-                        <code>#map</code> a function over them,
-                        <code>#filter</code> out values that don't pass a
-            condition, or even <code>#reduce</code> them with a function and
-                        some initial value, just like with <code>Array</code>s.
-                    </p>
-                    <p class="explain">
-                        The <code>#map</code>, <code>#filter</code>,
-            <code>#connect</code>, and <code>#reduce</code> methods all return a
-            brand new signal than the one whose method you called. (In the case
-            of connect, it returns the argument). This means wiring signals
-            together is very <strong>declarative</strong>.
+                        The actual values emitted <em>wrap around</em> raw
+                        browser events and provide some simple convenience
+                        methods - <code>#getId</code>, <code>#getValue</code>,
+                        and <code>#hasClass</code>, all of which provide
+                        information about the event target. And the raw event is
+                        only a call to <code>#getRaw</code> away.
                     </p>
                 </div>
                 <div class="example">
@@ -171,6 +160,7 @@ const eventApp = new alm.App({
                     </code></pre>
                 </div>
             </div><!-- row -->
+
             <div class="row">
                 <div class="explanation">
                     <h2>A colorful port example</h2>
@@ -233,6 +223,46 @@ colorApp.ports.background.recv(color => {
 });
                     </code></pre>
                 </div>
+            </div><!-- row -->
+            <div class="row">
+                <a name="signals"></a>
+                <h2>A quick word on <code>Signal</code>s</h2>
+                <p class="explain">
+                    You don't need to know a whole lot about
+                    <code>Signal</code>s to use Alm effectively but some things
+                    are worth mentioning until I can get some source
+                    documentation up.
+                </p>
+                <p class="explain">
+                    <code>Signal</code>s have some straightforward methods
+                    <ul>
+                        <li><code>#map</code> - transform signal values with a
+                            function</li>
+                        <li><code>#filter</code> - permit only values which pass
+                            a condition function</li>
+                        <li><code>#reduce</code> - similar to
+                            <code>Array#reduce</code> except the signature is
+                            <code>.reduce(initial_result, (new_value,
+    old_result))</code>.</li>.
+                    </ul>
+                    as well as
+                    <ul>
+                        <li><code>#send</code> -
+                            <code>someSignal.send(a_value);</code></li>
+                        <li><code>#recv</code> - <code>someSignal.recv(value =>
+            /* ... */)</code></li>
+                        <li><code>#connect</code> - Attach a signal downstream
+                            to another. eg,
+                            <code>sendingSignal.connect(receivingSignal)</code>.</li>
+                    </ul>
+                </p>
+                <p class="explain">
+                    The <code>#map</code>, <code>#filter</code>,
+                    <code>#connect</code>, and <code>#reduce</code> methods all
+                    return different signals than the one whose method you
+                    called. This allows Alm signal wiring to be very
+                    <strong>declarative</strong>.
+                </p>
             </div><!-- row -->
             <div class="row">
                 <p class="lead">There are certainly more examples to come but
