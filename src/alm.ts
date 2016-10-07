@@ -75,18 +75,29 @@ function makeEvents(evts) {
  *                          arrays and whose values are signals.
  */
 function makePorts(portCfg) {
-    const ports = (typeof portCfg === 'undefined' || portCfg === null)
+    let ports = (typeof portCfg === 'undefined' || portCfg === null)
         ? { outbound: [], inbound: [] }
         : portCfg;
 
-    for (let key in ports) {
-        const portNames = ports[key];
-        const portSpace = {};
-        for (let i = 0; i < portNames.length; i++) {
-            const portName = portNames[i];
-            portSpace[portName] = Signal.make();
+    if (typeof ports === 'array') {
+        const _ports = {};
+        for (let i = 0; i < ports.length; i++) {
+            const portName = ports[i];
+            _ports[portName] = Signal.make();
         }
-        ports[key] = portSpace;
+        ports = _ports;
+    }
+    else {
+
+        for (let key in ports) {
+            const portNames = ports[key];
+            const portSpace = {};
+            for (let i = 0; i < portNames.length; i++) {
+                const portName = portNames[i];
+                portSpace[portName] = Signal.make();
+            }
+            ports[key] = portSpace;
+        }
     }
 
     return ports;
