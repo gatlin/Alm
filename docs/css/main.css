@@ -28,7 +28,7 @@ span.lit {
         width: 50%;
     }
 
-    div.src {
+    div.example {
         float: right;
         width: 50%;
     }
@@ -36,7 +36,11 @@ span.lit {
     div.row {
         clear: both;
         margin-top: 15px;
-        padding-top: 5px;
+        padding-top: 5px;;
+    }
+
+    div.row:last-child {
+        padding-bottom: 150px;
     }
 
     p.lead {
@@ -46,7 +50,6 @@ span.lit {
     p.explain {
         line-height: 1.5em;
     }
-    /* example specific rules */
 
 }
 
@@ -70,7 +73,7 @@ span.lit {
         padding-bottom: 0;
         margin-bottom: 0;
     }
-    div.src {
+    div.example {
         display: block;
         padding-top: 0;
         margin-top: 0;
