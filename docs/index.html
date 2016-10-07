@@ -33,18 +33,10 @@
                 <div class="explanation">
                     <h2>Simple example: a little counter.</h2>
                     <p class="explain">
-                        Alm's primary goal is to help you <em>organize</em> your
-                        applications. Apps do a lot of things: they handle
-                        browser events, manipulate the DOM, update state,
-                        and (try to) keep everything synchronized and
-                        consistent.
-                    </p>
-
-                    <p class="explain">
                         An <span class="lit">App</span> asks for the following
                         right up front:
                         <ul>
-                            <li>Your application <em>state</em>;</li>
+                            <li>Your application's initial <em>state</em>;</li>
                             <li>How to take an <em>action</em> and a state to
                                 <strong>update</strong> it;</li>
                             <li>How to <strong>render</strong> the view given a
@@ -53,13 +45,21 @@
                                 listen for events and render the view.</li>
                         </ul>
                     </p>
-                    <p class="lead">
+                    <p class="explain">
                         The <span class="lit">alm.el</span> function is how you
-                        can the parts of your view. It takes a tag name, an
-                        object of attributes, and an (optional) array of
-                        children, which can be either more <span
-                        class="lit">alm.el</span> calls, or plain strings for
-                        text nodes.
+                        specify your view. It takes a tag name, an object of
+                        element properties, and an array of children. If a child
+                        is a <strong>string</strong> it will become a text node.
+                    </p>
+                    <p class="explain">
+                        The <span class="lit">main</span> property is a function
+                        which takes a <em>scope</em> and uses that to actually
+                        wire up the application logic. You <strong>send</strong>
+                        arbitrary messages to
+                        <span class="lit">scope.actions</span> 
+                        and those messages will be received by your
+                        <span class="lit">update</span>
+                        function.
                     </p>
                 </div>
                 <div class="src" id="src-1">
@@ -69,8 +69,6 @@
 /* A simple counter */
 const el = alm.el;
 const app1 = new alm.App({
-    eventRoot: 'app-1',
-    domRoot: 'app-1',
     state: 0,
     update: (action, num) => num + (action ? 1 : -1),
     render: state =>
@@ -89,7 +87,9 @@ const app1 = new alm.App({
         scope.events.click
             .filter(evt => evt.getId() === 'down-btn')
             .recv(evt => scope.actions.send(false));
-    }
+    },
+    eventRoot: 'app-1',
+    domRoot: 'app-1'
 }).start();
                         </code>
                     </pre>

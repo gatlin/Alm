@@ -93,11 +93,14 @@ div.app {
 div#app-1 {
     border: 1px solid #b9b9b9;
     padding: 5px;
-    margin-right: 10px;
 }
 
 p.aesthetic {
     text-align: center;
     font-size: 24pt;
     font-family: 'Arial', sans-serif;
+}
+
+p.explain, p.explain ul,  p.explain li {
+    margin-right: 10px;
 }
