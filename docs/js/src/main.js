@@ -3,100 +3,81 @@
 const alm = require('../../../dist/lib/alm.js'),
       el = alm.el;
 
-function rando(min,max) {
-    return Math.floor(Math.random() * (max - min) + min);
-}
-
-const app1 = new alm.App({
-    eventRoot: 'app-1',
-    domRoot: 'app-1',
-    state: {
-        words: ['ｗｏａｈ','ｗａｖｙ','ｔｕｂｕｌａｒ'],
-        which: 0
-    },
-    update: (_, state) => {
-        state.which = rando(0, state.words.length);
-        return state;
-    },
-    render: state => el('div', {}, [
-        el('p', {}, ['Click anywhere in this box for a random word']),
-        el('p', {'class':'aesthetic'}, [ state.words[state.which]])
-    ]),
+/* A simple counter */
+const counterApp = new alm.App({
+    state: 0,
+    update: (action, num) => num + (action ? 1 : -1),
     main: scope => {
-        scope.events.click.connect(scope.actions);
-    }
-}).start();
-
-function renderTasks(state) {
-    const input = el('input', {
-        'type': 'text',
-        'id':'app-2-input',
-        'placeholder':'Type something here go ahead'
-    });
-
-    const tasks_list = Object.keys(state.tasks)
-          .map(taskId => {
-              return el('li', {
-                  'id':'app-2-task-'+taskId,
-                  'class':'app-2-task'
-              }, [state.tasks[taskId]]);
-          });
-
-    return el('div', {}, [
-        input,
-        el('p', {}, ['Click on an item to delete it']),
-        el('ul', { 'id':'app-2-tasks' }, tasks_list)
-    ]);
-}
-
-const app2 = new alm.App({
-    eventRoot: 'app-2',
-    domRoot: 'app-2',
-    state: { id: 0, tasks: {}, num: 0 },
-    update: (action, model) => {
-        if (action.type === 'add') {
-            const uid = model.id++;
-            model.num++;
-            model.tasks[uid] = action.data;
-        }
-        else if (action.type === 'del') {
-            delete model.tasks[action.data];
-            model.num--;
-        }
-        console.log(model);
-        return model;
-    },
-
-    render: renderTasks,
-
-    main: (scope) => {
-        scope.events.keydown
-            .filter(evt => evt.getRaw().keyCode === 13 &&
-                    evt.getId() === 'app-2-input')
-            .recv(evt => scope.actions.send({
-                type: 'add',
-                data: evt.getRaw().target.value
-            }));
+        scope.events.click
+            .filter(evt => evt.getId() === 'up-btn')
+            .recv(evt => scope.actions.send(true));
 
         scope.events.click
-            .filter(evt => evt.hasClass('app-2-task'))
-            .recv(evt => scope.actions.send({
-                type: 'del',
-                data: evt.getId().split('-')[3]
-            }));
-
-        scope.state
-            .map(model => (model.num
-                           ? '('+model.num.toString()+') '
-                           : '') + 'Alm')
-            .connect(scope.ports.outbound.title);
+            .filter(evt => evt.getId() === 'down-btn')
+            .recv(evt => scope.actions.send(false));
     },
-    ports: {
-        outbound: ['title']
-    }
+    render: state =>
+        el('div', { 'id':'app-1-main' }, [
+            el('h3', { 'class':'app-1-header' }, [state.toString()]),
+            el('span', {}, [
+                el('button', { 'id':'up-btn' }, ['+1']),
+                el('button', { 'id':'down-btn' }, ['-1'])
+            ])
+        ]),
+    eventRoot: 'counter-app',
+    domRoot: 'counter-app'
 }).start();
 
-app2.ports.outbound.title
-    .recv(title => {
-        document.title = title;
-    });
+const eventApp = new alm.App({
+    state: { count: 0, overLimit: false },
+    update: (text, state) => {
+        state.count = text.length;
+        state.overLimit = state.count > 140;
+        return state;
+    },
+    main: scope => {
+        scope.events.input
+            .filter(evt => evt.getId() === 'text-event')
+            .recv(evt => scope.actions.send(evt.getValue()));
+    },
+    render: state =>
+        el('div', {}, [
+            el('textarea', { 'id': 'text-event' }),
+            el('p', {
+                'id':'limit-text',
+                'class': state.overLimit ? 'warning' : ''
+            }, [state.count.toString() + ' / 140 characters'])
+        ]),
+    eventRoot: 'event-app',
+    domRoot: 'event-app'
+}).start();
+
+const colorApp = new alm.App({
+    state: '#ffffff',
+    update: (value, color) => value,
+    ports: ['background'],
+    main: scope => {
+        scope.events.input
+            .filter(evt => evt.getId() === 'app2-color')
+            .recv(evt => scope.actions.send(evt.getValue()));
+
+        scope.events.click
+            .filter(evt => evt.getId() === 'app2-reset')
+            .recv(_ => scope.actions.send('#ffffff'));
+
+        scope.state.connect(scope.ports.background);
+    },
+    render: color =>
+        el('span', {}, [
+            el('input', { 'type':'color',
+                          'id':'app2-color',
+                          'value':color }),
+            el('button', { 'id':'app2-reset' }, ['Reset'])
+        ]),
+    eventRoot: 'color-app',
+    domRoot: 'color-app'
+}).start();
+
+colorApp.ports.background.recv(color => {
+    document.body.style.backgroundColor = color;
+});

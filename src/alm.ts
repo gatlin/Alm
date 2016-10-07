@@ -75,7 +75,17 @@ function makeEvents(evts) {
  *                          arrays and whose values are signals.
  */
 function makePorts(portCfg) {
-    const ports = (typeof portCfg === 'undefined' || portCfg === null)
+    // If it is simply an array then make ports for each string
+    if (Array.isArray(portCfg)) {
+        const _ports = {};
+        for (let i = 0; i < portCfg.length; i++) {
+            const portName = portCfg[i];
+            _ports[portName] = Signal.make();
+        }
+        return _ports;
+    }
+
+    let ports = (typeof portCfg === 'undefined' || portCfg === null)
         ? { outbound: [], inbound: [] }
         : portCfg;
 
@@ -88,7 +98,6 @@ function makePorts(portCfg) {
         }
         ports[key] = portSpace;
     }
-
     return ports;
 }
 
@@ -158,9 +167,7 @@ export class App<T> {
             : []);
 
         this.events = makeEvents(events);
-        this.ports = typeof cfg.ports !== 'undefined'
-            ? makePorts(cfg.ports)
-            : { outbound: null, inbound: null };
+        this.ports = makePorts(cfg.ports);
 
         // create the signal graph
         const actions = new Mailbox(null);
@@ -200,6 +207,32 @@ export class App<T> {
      */
     public editScope(cb) {
         cb(this.scope);
+        return this;
+    }
+
+    /**
+     * Set the root element in the page to which we will attach listeners.
+     * @param er - Either an HTML element, the whole document, or an element ID
+     *             as a string.
+     * @return @this
+     */
+    public setEventRoot(er: HTMLElement | Document | string): this {
+        this.eventRoot = typeof er === 'string'
+            ? document.getElementById(er)
+            : er;
+        return this;
+    }
+
+    /**
+     * Set the root element in the page in which we will render.
+     * @param er - Either an HTML element, the whole document, or an element ID
+     *             as a string.
+     * @return @this
+     */
+    public setDomRoot(dr: HTMLElement | string): this {
+        this.domRoot = typeof dr === 'string'
+            ? document.getElementById(dr)
+            : dr;
         return this;
     }
 
