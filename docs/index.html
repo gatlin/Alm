@@ -109,17 +109,17 @@ const counterApp = new alm.App({
                 <div class="explanation">
                     <h2>Events!</h2>
                     <p class="explain">
+                        Events are communicated via <em>signals</em>. Signals
+                        are really the foundation of Alm but you don't have to know a whole
+                        lot to use them effectively.
+                    </p>
+                    <p class="explain">
                         When you create your <code>App</code> a number of
                         default event signals are created and given to you via
                         the <em>scope</em> argument to your <code>main</code>
                         function. When your app finally <code>start</code>s up
             only those events you actually subscribed to will actually be
             registered.
-                    </p>
-                    <p class="explain">
-                        Events are communicated via <em>signals</em>. Signals
-            are really the foundation of Alm but you don't have to know a whole
-            lot to use them effectively.
                     </p>
                     <p class="explain">
                         You can <strong>send</strong> values to signals using
