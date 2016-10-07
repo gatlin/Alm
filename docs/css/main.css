@@ -7,6 +7,15 @@ h1 {
     text-align: center;
 }
 
+h2 {
+    margin-top: 0;
+}
+
+span.lit {
+    font-family: monospace;
+    font-size: 1.1em;
+}
+
 @media only screen and (min-width: 960px) {
 
     div#column-container {
@@ -14,7 +23,7 @@ h1 {
         width: 960px;
     }
 
-    div.app {
+    div.explanation {
         float: left;
         width: 50%;
     }
@@ -26,9 +35,17 @@ h1 {
 
     div.row {
         clear: both;
-        margin-top: 5px;
+        margin-top: 15px;
+        padding-top: 5px;
     }
 
+    p.lead {
+        line-height: 1.2em;
+    }
+
+    p.explain {
+        line-height: 1.5em;
+    }
     /* example specific rules */
 
 }
@@ -44,10 +61,11 @@ h1 {
     }
 
     div#column-container {
-        width: 100%;
+        width: 98%;
+        margin: 0 auto;
     }
 
-    div.app {
+    div.explanation {
         display: block;
         padding-bottom: 0;
         margin-bottom: 0;
@@ -62,6 +80,14 @@ h1 {
         margin: 0;
         padding-left: 5px;
     }
+}
+
+div.row {
+    border-top: 1px solid #b9b9b9;
+}
+
+div.app {
+    margin-top: 10px;
 }
 
 div#app-1 {

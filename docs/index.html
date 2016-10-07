@@ -13,139 +13,89 @@
         <div id="column-container">
             <div class="row">
                 <p class="lead">This is a website for
-                    <a href="https://github.com/gatlin/alm">Alm</a>, a neat web
-                    application framework I made. The README has a lot of
-                    information. In the meantime here are some examples I've
-                    ginned up.</p>
-                <p class="lead">You can also see
+                    <a href="https://github.com/gatlin/alm">Alm a neat web
+                        application framework I made.</a> The README on GitHub
+                    has a lot of information. You can also see
                     <a href="todo.html">a more involved, obligatory todo list
                         app</a> as well as
                     <a
                         href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its
                         code</a>.</p>
+                <p class="lead">
+                    This page is a simple tutorial showing a few small apps and
+                    how they work and can grow maintainably thanks to Alm.
+                </p>
                 <p class="lead">If you have any questions or comments or free
                     money don't hesitate to reach me at
                     <a href="mailto:gatlin@niltag.net">gatlin@niltag.net</a>.</p>
             </div>
             <div class="row">
-                <div class="app" id="app-1-container">
-                    <h3>Simple example</h3>
-                    <div id="app-1"></div>
+                <div class="explanation">
+                    <h2>Simple example: a little counter.</h2>
+                    <p class="explain">
+                        Alm's primary goal is to help you <em>organize</em> your
+                        applications. Apps do a lot of things: they handle
+                        browser events, manipulate the DOM, update state,
+                        and (try to) keep everything synchronized and
+                        consistent.
+                    </p>
+
+                    <p class="explain">
+                        An <span class="lit">App</span> asks for the following
+                        right up front:
+                        <ul>
+                            <li>Your application <em>state</em>;</li>
+                            <li>How to take an <em>action</em> and a state to
+                                <strong>update</strong> it;</li>
+                            <li>How to <strong>render</strong> the view given a
+                                <em>state</em>;</li>
+                            <li>Where in the <em>document hierarchy</em> to
+                                listen for events and render the view.</li>
+                        </ul>
+                    </p>
+                    <p class="lead">
+                        The <span class="lit">alm.el</span> function is how you
+                        can the parts of your view. It takes a tag name, an
+                        object of attributes, and an (optional) array of
+                        children, which can be either more <span
+                        class="lit">alm.el</span> calls, or plain strings for
+                        text nodes.
+                    </p>
                 </div>
                 <div class="src" id="src-1">
+                    <div id="app-1" class="app"></div>
                     <pre>
                         <code>
-function rando(min,max) {
-    return Math.floor(Math.random() * (max - min) + min);
-}
-
+/* A simple counter */
+const el = alm.el;
 const app1 = new alm.App({
     eventRoot: 'app-1',
     domRoot: 'app-1',
-    state: {
-        words: ['ｗｏａｈ','ｗａｖｙ','ｔｕｂｕｌａｒ'],
-        which: 0
-    },
-    update: (_, state) => {
-        state.which = rando(0, state.words.length);
-        return state;
-    },
-    render: state => el('div', {}, [
-        el('p', {},
-            ['Click anywhere in this box for a random word']),
-        el('p', {'class':'aesthetic'}, [ state.words[state.which]])
-    ]),
+    state: 0,
+    update: (action, num) => num + (action ? 1 : -1),
+    render: state =>
+        el('div', { 'id':'app-1-main' }, [
+            el('h3', { 'class':'app-1-header' }, [state.toString()]),
+            el('span', {}, [
+                el('button', { 'id':'up-btn' }, ['+']),
+                el('button', { 'id':'down-btn' }, ['-'])
+            ])
+        ]),
     main: scope => {
-        scope.events.click.connect(scope.actions);
+        scope.events.click
+            .filter(evt => evt.getId() === 'up-btn')
+            .recv(evt => scope.actions.send(true));
+
+        scope.events.click
+            .filter(evt => evt.getId() === 'down-btn')
+            .recv(evt => scope.actions.send(false));
     }
 }).start();
                         </code>
                     </pre>
                 </div>
             </div><!-- row -->
-            <div class="row">
-                <div class="app" id="app-2-container">
-                    <h3>A silly, simple list app.</h3>
-                    <div id="app-2"></div>
-                </div>
-                <div class="src" id="src-2">
-                    <pre><code>
-const app2 = new alm.App({
-    eventRoot: 'app-2',
-    domRoot: 'app-2',
-    state: { id: 0, tasks: {}, num: 0 },
-    update: (action, model) => {
-        if (action.type === 'add') {
-            const uid = model.id++;
-            model.num++;
-            model.tasks[uid] = action.data;
-        }
-        else if (action.type === 'del') {
-            delete model.tasks[action.data];
-            model.num--;
-        }
-        console.log(model);
-        return model;
-    },
 
-    render: renderTasks,
-
-    main: (scope) => {
-        scope.events.keydown
-            .filter(evt => evt.getRaw().keyCode === 13 &&
-                    evt.getId() === 'app-2-input')
-            .recv(evt => scope.actions.send({
-                type: 'add',
-                data: evt.getRaw().target.value
-            }));
-
-        scope.events.click
-            .filter(evt => evt.hasClass('app-2-task'))
-            .recv(evt => scope.actions.send({
-                type: 'del',
-                data: evt.getId().split('-')[3]
-            }));
-
-        scope.state
-            .map(model => (model.num
-                           ? '('+model.num.toString()+') '
-                           : '') + 'Alm')
-            .connect(scope.ports.outbound.title);
-    },
-    ports: {
-        outbound: ['title']
-    }
-}).start();
-
-app2.ports.outbound.title
-    .recv(title => {
-        document.title = title;
-    });
-
-function renderTasks(state) {
-    const input = el('input', {
-        'type': 'text',
-        'id':'app-2-input',
-        'placeholder':'Type a reminder here'
-    });
-
-    const tasks_list = Object.keys(state.tasks)
-          .map(taskId => {
-              return el('li', {
-                  'id':'app-2-task-'+taskId,
-                  'class':'app-2-task'
-              }, [state.tasks[taskId]]);
-          });
-
-    return el('div', {}, [
-        input,
-        el('p', {}, ['Click on a reminder to delete it']),
-        el('ul', { 'id':'app-2-tasks' }, tasks_list)
-    ]);
-}
-                    </code></pre>
-                </div>
-            </div>
         </div>
         <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/highlight.min.js"></script>
         <script>hljs.initHighlightingOnLoad();</script>
