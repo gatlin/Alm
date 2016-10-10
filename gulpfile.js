@@ -13,6 +13,20 @@ gulp.task('js', function() {
         .pipe(gulp.dest('./dist/lib'));
 });
 
+gulp.task('async', ['js'], function() {
+    return gulp.src('./dist/lib/async.js')
+        .pipe(gulpWebpack({
+            output: {
+                filename: 'async-umd.js',
+                libraryTarget: 'umd',
+                /* leave off this part and it'll be namespaced in code with
+                   `require` and not in browsers. */
+                library: 'asink'
+            }
+        }))
+        .pipe(gulp.dest('./dist'));
+});
+
 gulp.task('bundle', ['js'], function() {
     return gulp.src('./dist/lib/alm.js')
         .pipe(gulpWebpack({
