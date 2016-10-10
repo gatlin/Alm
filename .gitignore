@@ -23,5 +23,5 @@ src/*.js
 ./.AppleDouble
 ./*/.AppleDouble
 dist/lib
-dist/async-umd.js
+dist/task-umd.js
 example/dist

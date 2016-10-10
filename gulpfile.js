@@ -13,16 +13,19 @@ gulp.task('js', function() {
         .pipe(gulp.dest('./dist/lib'));
 });
 
-gulp.task('async', ['js'], function() {
-    return gulp.src('./dist/lib/async.js')
+gulp.task('task', ['js'], function() {
+    return gulp.src('./dist/lib/task.js')
         .pipe(gulpWebpack({
             output: {
-                filename: 'async-umd.js',
+                filename: 'task-umd.js',
                 libraryTarget: 'umd',
                 /* leave off this part and it'll be namespaced in code with
                    `require` and not in browsers. */
-                library: 'asink'
-            }
+                library: 'task'
+            },
+            plugins: [
+                new webpack.optimize.UglifyJsPlugin()
+            ]
         }))
         .pipe(gulp.dest('./dist'));
 });

@@ -4,16 +4,16 @@ import { HasFlatMap, FlatMap, derive, Signal, async } from './base';
 Yet another implementation of promises.
 
 Whereas Signals are intended to run multiple times and repeatedly send values to
-any listeners, Async computations call each listener at most once for a given
+any listeners, Task computations call each listener at most once for a given
 promise.
 
-Because they are derived from Signals you can use Async computations anywhere
+Because they are derived from Signals you can use Task computations anywhere
 you would use a Signal.
 
 As of right now this doesn't make it to the minified bundle. It's useful but
 should also probably be in its own repository. Meh?
 */
-export class Async<T> extends Signal<T, T> implements HasFlatMap<T> {
+export class Task<T> extends Signal<T, T> implements HasFlatMap<T> {
     private value: T;
     constructor() {
         super(x => x);
@@ -21,7 +21,7 @@ export class Async<T> extends Signal<T, T> implements HasFlatMap<T> {
     }
 
     static of(v) {
-        const a = new Async();
+        const a = new Task();
         a.send(v);
         return a;
     }
@@ -50,14 +50,14 @@ export class Async<T> extends Signal<T, T> implements HasFlatMap<T> {
     }
 
     map(f) {
-        const a = new Async();
+        const a = new Task();
         this.recv(val => a.send(f(val)));
         return a;
     }
 
-    flatten(): Async<T> {
-        const a = new Async<T>();
-        this.recv(function (a2: Async<T>): void {
+    flatten(): Task<T> {
+        const a = new Task<T>();
+        this.recv(function (a2: Task<T>): void {
             a2.recv(function (val: T): void {
                 a.send(val);
             });
@@ -70,4 +70,4 @@ export class Async<T> extends Signal<T, T> implements HasFlatMap<T> {
     pipe(_) { return null; }
 }
 
-derive(Async, [FlatMap]);
+derive(Task, [FlatMap]);
