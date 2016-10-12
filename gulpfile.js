@@ -3,6 +3,7 @@ var serve = require('gulp-serve');
 var ts = require('gulp-typescript');
 var gulpWebpack = require('gulp-webpack');
 var webpack = require('webpack');
+var del = require('del');
 
 gulp.task('js', function() {
     return gulp.src('./src/*.ts')
@@ -66,3 +67,9 @@ gulp.task('docs', ['example'], function() {
 });
 
 gulp.task('serve', serve('./docs/'));
+
+gulp.task('clean', function() {
+    del(['./src/*.js',
+         './dist/lib',
+         './dist/task-umd.js']);
+});
