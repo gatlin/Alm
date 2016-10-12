@@ -189,6 +189,12 @@ The project website contains an example todo list. Run
 and then navigate to `http://localhost:3000/` or
 `http://localhost:3000/todo.html` to see them in action.
 
+Testing
+---
+
+A nascent testing system is currently present. Run `npm test` to run whatever
+tests currently exist.
+
 License
 ---
 
