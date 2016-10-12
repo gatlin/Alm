@@ -711,6 +711,7 @@
 	        }
 	        return moves;
 	    }
+	    exports.diff_array = diff_array;
 	    /**
 	     * The name is a little misleading. This takes an old and a current
 	     * {@link VTree}, the parent node of the one the old tree represents,
@@ -782,6 +783,7 @@
 	            parent.replaceChild(makeDOMNode(b), parent.childNodes[index]);
 	        }
 	    }
+	    exports.diff_dom = diff_dom;
 	    /**
 	     * This reduces a Signal producing VTrees.
 	     *
