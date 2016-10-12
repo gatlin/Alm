@@ -848,18 +848,19 @@
 	        var d = new Array(m * n);
 	        var moves = [];
 	        for (var i_1 = 0; i_1 < m; i_1++) {
-	            d[i_1 * n] = 0;
+	            d[i_1 * n] = i_1;
 	        }
 	        for (var j_1 = 0; j_1 < n; j_1++) {
-	            d[j_1] = 0;
+	            d[j_1] = j_1;
 	        }
-	        for (var i_2 = 1; i_2 < m; i_2++) {
-	            for (var j_2 = 1; j_2 < n; j_2++) {
+	        for (var j_2 = 1; j_2 < n; j_2++) {
+	            for (var i_2 = 1; i_2 < m; i_2++) {
 	                if (eq(a[i_2 - 1], b[j_2 - 1])) {
-	                    d[i_2 * n + j_2] = d[(i_2 - 1) * n + (j_2 - 1)] + 1;
+	                    d[i_2 * n + j_2] = d[(i_2 - 1) * n + (j_2 - 1)];
 	                }
 	                else {
-	                    d[i_2 * n + j_2] = Math.max(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)]);
+	                    d[i_2 * n + j_2] = Math.min(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)])
+	                        + 1;
 	                }
 	            }
 	        }
@@ -871,7 +872,7 @@
 	                moves.unshift([Op.Merge, a[i], b[j]]);
 	            }
 	            else {
-	                if (d[i * n + (j - 1)] > d[(i - 1) * n + j]) {
+	                if (d[i * n + (j - 1)] <= d[(i - 1) * n + j]) {
 	                    j--;
 	                    moves.unshift([Op.Insert, null, b[j]]);
 	                }

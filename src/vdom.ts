@@ -173,23 +173,22 @@ function diff_array(a: any, b: any, eq: Eq<any>) {
     const moves = [];
 
     for (let i = 0; i < m; i++) {
-        d[i * n] = 0;
+        d[i * n] = i;
     }
 
     for (let j = 0; j < n; j++) {
-        d[j] = 0;
+        d[j] = j;
     }
-
-    for (let i = 1; i < m; i++) {
-        for (let j = 1; j < n; j++) {
+    for (let j = 1; j < n; j++) {
+        for (let i = 1; i < m; i++) {
             if (eq(a[i - 1], b[j - 1])) {
-                d[i * n + j] = d[(i - 1) * n + (j - 1)] + 1;
+                d[i * n + j] = d[(i - 1) * n + (j - 1)];
             }
             else {
-
-                d[i * n + j] = Math.max(
+                d[i * n + j] = Math.min(
                     d[(i - 1) * n + j],
-                    d[i * n + (j - 1)]);
+                    d[i * n + (j - 1)])
+                    + 1;
             }
         }
     }
@@ -202,7 +201,7 @@ function diff_array(a: any, b: any, eq: Eq<any>) {
             moves.unshift([Op.Merge, a[i], b[j]]);
         }
         else {
-            if (d[i * n + (j - 1)] > d[(i - 1) * n + j]) {
+            if (d[i * n + (j - 1)] <= d[(i - 1) * n + j]) {
                 j--;
                 moves.unshift([Op.Insert, null, b[j]]);
             }
