@@ -1,11 +1,23 @@
 {
-  "devDependencies": {
-    "del": "^2.2.2",
-    "gulp": "^3.9.1",
-    "gulp-serve": "^1.4.0",
-    "gulp-typescript": "^3.0.1",
-    "gulp-webpack": "^1.5.0",
-    "typescript": "^2.0.3",
-    "webpack": "^1.13.2"
-  }
+    "name": "alm",
+    "version": "0.0.1",
+    "description": "A Little Module for Application Lifecycle Management",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/gatlin/alm.git"
+    },
+    "author": "Gatlin Johnson",
+    "scripts": {
+        "test": "./tests/*.ts"
+    },
+    "devDependencies": {
+        "del": "^2.2.2",
+        "gulp": "^3.9.1",
+        "gulp-serve": "^1.4.0",
+        "gulp-typescript": "^3.0.1",
+        "gulp-webpack": "^1.5.0",
+        "tap": "^7.1.2",
+        "typescript": "^2.0.3",
+        "webpack": "^1.13.2"
+    }
 }

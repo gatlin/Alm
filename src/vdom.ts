@@ -156,7 +156,7 @@ type Eq<T> = (a: T, b: T) => boolean;
  * @param eq - An equality testing function for elements in the arrays.
  * @return An array of {@link Op} values.
  */
-function diff_array(a: any, b: any, eq: Eq<any>) {
+export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
 
     if (!a.length) {
         return b.map(c => [Op.Insert, null, c]);
@@ -234,7 +234,7 @@ function diff_array(a: any, b: any, eq: Eq<any>) {
  * treat this as a list diff problem for the children and then, once children
  * are paired up, we can recurse on them.
  */
-function diff_dom(parent, a, b, index = 0) {
+export function diff_dom(parent, a, b, index = 0) {
 
     if (typeof b === 'undefined' || b === null) {
         parent.removeChild(parent.childNodes[index]);
