@@ -122,7 +122,7 @@ export type AppConfig<T> = {
     gui?: boolean;
     eventRoot?: HTMLElement | Document | string;
     domRoot?: HTMLElement | string;
-    render?: (t: T) => Signal<any, VTree>;
+    render?: (t: T) => VTree;
     ports?: any; // See [2] at the bottom
     extraEvents?: Array<string>;
 };
@@ -141,7 +141,7 @@ export class App<T> {
     private ports: any;
     private state: T;
     private update: (a: any, m: T) => T;
-    private render: (t: T) => Signal<any, VTree>;
+    private render: (t: T) => VTree;
     private scope;
 
     constructor(cfg: AppConfig<T>) {
