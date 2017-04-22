@@ -46,6 +46,18 @@ gulp.task('bundle', ['js'], function() {
         .pipe(gulp.dest('./dist'));
 });
 
+gulp.task('dev-bundle', ['js'], function() {
+    return gulp.src('./dist/lib/alm.js')
+        .pipe(gulpWebpack({
+            output: {
+                filename: 'alm-dev.js',
+                libraryTarget: 'var',
+                library: 'alm'
+            }
+        }))
+        .pipe(gulp.dest('./dist'));
+});
+
 gulp.task('example', ['js'], function() {
     return gulp.src('./docs/js/src/todo.js')
         .pipe(gulpWebpack({
