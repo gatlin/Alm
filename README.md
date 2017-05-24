@@ -21,7 +21,8 @@ The file `dist/alm-bundled.js` is a minified single file which you can include
 in a page using a `<script>` tag. The contents of the library are made available
 on a global variable `alm`. See "Overview" for preliminary documentation.
 
-*More information on building is available below, under "Building."*
+*More information on building is available below, under "Building." For an
+easy-to-use project template, see [`alm-template`][almtemplate].*
 
 Overview
 ---
@@ -230,3 +231,4 @@ Feel free to email me at <gatlin@niltag.net> or use the GitHub Issue tracker.
 [amd]: http://requirejs.org/docs/whyamd.html
 [gulp]: http://gulpjs.com/
 [todoexample]: http://niltag.net/Alm/todo.html
+[almtemplate]: https://github.com/gatlin/alm-template
