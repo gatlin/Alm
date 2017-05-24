@@ -131,6 +131,21 @@ every single time the state is updated. Alm instead computes a *diff* between
 the old virtual DOM and the new virtual DOM and only updates the page where
 necessary.
 
+Each virtual DOM node is assigned a *key* to assist the diff algorithm: if two
+nodes are compared and have the same key then they will trivially be considered
+equal.
+
+You may set the key by setting a `key` attribute for the node; otherwise the
+following keys will be tried in this order:
+
+1. the `id` attribute;
+2. the tag name; or if it's a text node
+3. the string `text-node`.
+
+If you want to ensure the destruction of a node with a particular `id` you can
+assign the new node a different `key` without having to write separate code
+referencing different `id`s.
+
 #### Ports
 
 A *port* is just a `Signal`, but one which is created by the `App`, made
