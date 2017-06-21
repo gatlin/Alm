@@ -2,11 +2,9 @@ export * from './base';
 export { el } from './vdom';
 
 import {
-    HasFlatMap,
-    FlatMap,
-    derive,
     Signal,
-    Mailbox
+    Mailbox,
+    Reducer
 } from './base';
 
 import { VTree, render } from './vdom';
@@ -47,6 +45,31 @@ export class AlmEvent {
     public getRaw() {
         return this.raw;
     }
+
+    public class_in_ancestry(klass: string) {
+        let result = null;
+        let done = false;
+        let elem = this.raw.target;
+
+        while (!done) {
+            if (!elem.className) {
+                done = true;
+                break;
+            }
+            let klasses = elem.className.trim().split(/\s+/g) || [];
+            if (klasses.indexOf(klass) !== -1) {
+                result = elem;
+                done = true;
+            }
+            else if (elem.parentNode) {
+                elem = elem.parentNode;
+            }
+            else {
+                done = true;
+            }
+        }
+        return result;
+    }
 }
 
 /**
@@ -54,7 +77,7 @@ export class AlmEvent {
  * @param {Array<string>} evts - The event names you want signals for.
  * @return {Array<Signal>} The event signals.
  */
-function makeEvents(evts) {
+function makeEvents(evts): Object {
     const events = {};
     for (let i = 0; i < evts.length; i++) {
         let evtName = evts[i];
@@ -127,6 +150,19 @@ export type AppConfig<T> = {
     extraEvents?: Array<string>;
 };
 
+export interface Action<A> {
+    type: A;
+    data?: any;
+}
+
+export type Scope = {
+    events: Object;
+    ports: Object;
+    actions: Mailbox<any>;
+    state: any;
+    mailbox: <A>(v: A | void) => Mailbox<A>;
+};
+
 /**
  * A self-contained application.
  * @constructor
@@ -136,15 +172,17 @@ export class App<T> {
     private gui: boolean;
     private eventRoot: HTMLElement | Document;
     private domRoot: HTMLElement;
-    private events: any
+    private events: Object;
     private main: (t: any) => void;
-    private ports: any;
+    private ports: Object;
     private state: T;
-    private update: (a: any, m: T) => T;
+    private update: <A>(a: A, m: T) => T;
     private render: (t: T) => VTree;
-    private scope;
+    private scope: Scope;
 
     constructor(cfg: AppConfig<T>) {
+
+        this.state = cfg.state;
 
         this.gui = typeof cfg.gui === 'undefined'
             ? true
@@ -172,17 +210,18 @@ export class App<T> {
         // create the signal graph
         const actions = new Mailbox(null);
         const state = actions.reduce(cfg.state, (action, model) => {
-            if (action === null) {
-                return model;
+            if (action) {
+                return cfg.update(action, model);
             }
-            return cfg.update(action, model);
+            return model;
         });
 
         this.scope = Object.seal({
             events: this.events,
             ports: this.ports,
             actions: actions,
-            state: state
+            state: state,
+            mailbox: v => new Mailbox(v)
         });
 
         cfg.main(this.scope);

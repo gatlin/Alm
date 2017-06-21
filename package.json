@@ -1,6 +1,6 @@
 {
     "name": "alm",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "description": "A Little Module for Application Lifecycle Management",
     "repository": {
         "type": "git",

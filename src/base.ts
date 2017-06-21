@@ -1,63 +1,15 @@
-/**
- * Permits something akin to traits and automatically derived functions. The
- * type receiving the traits must implement stub properties with the correct
- * names.
- *
- * @param derivedCtor - the constructor you want to add traits to.
- * @param baseCtors - the parent constructors you wish to inherit traits from.
- */
-export function derive(derivedCtor: any, baseCtors: any[]) {
-    baseCtors.forEach(baseCtor => {
-        Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
-            derivedCtor.prototype[name] = baseCtor.prototype[name];
-        });
-    });
-}
-
 /** Higher order types which permit mapping a function over the base type. */
 export interface HasMap<T> {
     map<U>(f: (t: T) => U): HasMap<U>;
-}
-
-/** Higher order types which permit a flatMap method. */
-export interface HasFlatMap<T> extends HasMap<T> {
-    flatten<K extends HasFlatMap<T>>(): K;
-    flatMap<U>(f: (t: T) => HasFlatMap<U>): HasFlatMap<U>;
-}
-
-/**
- * Using `derive` you can get an implementation of flatMap for free by
- * implementing this class as an interface with a null return value for flatMap.
- */
-export abstract class FlatMap<T> implements HasFlatMap<T> {
-    abstract map(f);
-    abstract flatten<T extends HasFlatMap<any>>(): T;
-
-    static pipe(ms) {
-        let v = ms[0];
-        for (let i = 1; i < ms.length; i++) {
-            v = v.flatMap(ms[i]);
-        }
-        return v;
-    }
-
-    flatMap(f) {
-        return this.map(f).flatten();
-    }
-
-    pipe(ms) {
-        let me: this = this;
-        for (let i = 0; i < ms.length; i++) {
-            me = me.flatMap(ms[i]);
-        }
-        return me;
-    }
 }
 
 /** Utility function to perform some function asynchronously. */
 export function async(f): void {
     setTimeout(f, 0);
 }
+
+
+export type Reducer<A, T> = (a: A, t: T) => T;
 
 /**
  * Signals route data through an application.
@@ -148,9 +100,9 @@ export class Signal<A, B> implements HasMap<B> {
      *                  reduced value.
      * @return a new Signal attached as a listener to this Signal.
      */
-    public reduce(initial, reducer) {
+    public reduce(initial, reducer: Reducer<A, B>) {
         let state = initial;
-        let r = new Signal(function (v) {
+        let r = new Signal(v => {
             state = reducer(v, state);
             return state;
         });
@@ -162,19 +114,19 @@ export class Signal<A, B> implements HasMap<B> {
     }
 }
 
-
-
 /**
  * A signal to which you may send and receive values. Messages are sent
- * asynchronously. You must supply an initial value to send.
+ * asynchronously. If you supply an initial value it will be sent immediately.
  *
  * This makes Mailboxes useful for kicking off any initial actions that must
  * be taken. Internally a Mailbox is used for initial state reduction by App.
  */
 export class Mailbox<T> extends Signal<T, T> {
-    constructor(t: T) {
+    constructor(t: T | void) {
         super(x => x);
-        this.send(t);
+        if (typeof t !== 'undefined') {
+            this.send(t);
+        }
     }
 
     public send(t: T): void {

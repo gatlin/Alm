@@ -231,6 +231,12 @@
 	    },
 	    main: (scope) => {
 
+	        const mbox = scope.mailbox();
+
+	        mbox.recv(v => {
+	            console.log(v);
+	        });
+
 	        scope.events.change
 	            .filter(evt => evt.hasClass('toggle'))
 	            .recv(evt => scope.actions.send({
@@ -339,6 +345,29 @@
 	        AlmEvent.prototype.getRaw = function () {
 	            return this.raw;
 	        };
+	        AlmEvent.prototype.class_in_ancestry = function (klass) {
+	            var result = null;
+	            var done = false;
+	            var elem = this.raw.target;
+	            while (!done) {
+	                if (!elem.className) {
+	                    done = true;
+	                    break;
+	                }
+	                var klasses = elem.className.trim().split(/\s+/g) || [];
+	                if (klasses.indexOf(klass) !== -1) {
+	                    result = elem;
+	                    done = true;
+	                }
+	                else if (elem.parentNode) {
+	                    elem = elem.parentNode;
+	                }
+	                else {
+	                    done = true;
+	                }
+	            }
+	            return result;
+	        };
 	        return AlmEvent;
 	    }());
 	    exports.AlmEvent = AlmEvent;
@@ -409,6 +438,7 @@
 	     */
 	    var App = (function () {
 	        function App(cfg) {
+	            this.state = cfg.state;
 	            this.gui = typeof cfg.gui === 'undefined'
 	                ? true
 	                : cfg.gui;
@@ -430,16 +460,17 @@
 	            // create the signal graph
 	            var actions = new base_2.Mailbox(null);
 	            var state = actions.reduce(cfg.state, function (action, model) {
-	                if (action === null) {
-	                    return model;
+	                if (action) {
+	                    return cfg.update(action, model);
 	                }
-	                return cfg.update(action, model);
+	                return model;
 	            });
 	            this.scope = Object.seal({
 	                events: this.events,
 	                ports: this.ports,
 	                actions: actions,
-	                state: state
+	                state: state,
+	                mailbox: function (v) { return new base_2.Mailbox(v); }
 	            });
 	            cfg.main(this.scope);
 	            this.render = this.gui ? cfg.render : null;
@@ -534,49 +565,6 @@
 	};
 	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__, exports], __WEBPACK_AMD_DEFINE_RESULT__ = function (require, exports) {
 	    "use strict";
-	    /**
-	     * Permits something akin to traits and automatically derived functions. The
-	     * type receiving the traits must implement stub properties with the correct
-	     * names.
-	     *
-	     * @param derivedCtor - the constructor you want to add traits to.
-	     * @param baseCtors - the parent constructors you wish to inherit traits from.
-	     */
-	    function derive(derivedCtor, baseCtors) {
-	        baseCtors.forEach(function (baseCtor) {
-	            Object.getOwnPropertyNames(baseCtor.prototype).forEach(function (name) {
-	                derivedCtor.prototype[name] = baseCtor.prototype[name];
-	            });
-	        });
-	    }
-	    exports.derive = derive;
-	    /**
-	     * Using `derive` you can get an implementation of flatMap for free by
-	     * implementing this class as an interface with a null return value for flatMap.
-	     */
-	    var FlatMap = (function () {
-	        function FlatMap() {
-	        }
-	        FlatMap.pipe = function (ms) {
-	            var v = ms[0];
-	            for (var i = 1; i < ms.length; i++) {
-	                v = v.flatMap(ms[i]);
-	            }
-	            return v;
-	        };
-	        FlatMap.prototype.flatMap = function (f) {
-	            return this.map(f).flatten();
-	        };
-	        FlatMap.prototype.pipe = function (ms) {
-	            var me = this;
-	            for (var i = 0; i < ms.length; i++) {
-	                me = me.flatMap(ms[i]);
-	            }
-	            return me;
-	        };
-	        return FlatMap;
-	    }());
-	    exports.FlatMap = FlatMap;
 	    /** Utility function to perform some function asynchronously. */
 	    function async(f) {
 	        setTimeout(f, 0);
@@ -677,7 +665,7 @@
 	    exports.Signal = Signal;
 	    /**
 	     * A signal to which you may send and receive values. Messages are sent
-	     * asynchronously. You must supply an initial value to send.
+	     * asynchronously. If you supply an initial value it will be sent immediately.
 	     *
 	     * This makes Mailboxes useful for kicking off any initial actions that must
 	     * be taken. Internally a Mailbox is used for initial state reduction by App.
@@ -685,8 +673,11 @@
 	    var Mailbox = (function (_super) {
 	        __extends(Mailbox, _super);
 	        function Mailbox(t) {
-	            _super.call(this, function (x) { return x; });
-	            this.send(t);
+	            var _this = _super.call(this, function (x) { return x; }) || this;
+	            if (typeof t !== 'undefined') {
+	                _this.send(t);
+	            }
+	            return _this;
 	        }
 	        Mailbox.prototype.send = function (t) {
 	            var _this = this;
