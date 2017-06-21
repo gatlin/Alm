@@ -8,9 +8,6 @@ export function async(f): void {
     setTimeout(f, 0);
 }
 
-
-export type Reducer<A, T> = (a: A, t: T) => T;
-
 /**
  * Signals route data through an application.
 
@@ -100,7 +97,7 @@ export class Signal<A, B> implements HasMap<B> {
      *                  reduced value.
      * @return a new Signal attached as a listener to this Signal.
      */
-    public reduce(initial, reducer: Reducer<A, B>) {
+    public reduce(initial: B, reducer: (a: A, b: B) => B) {
         let state = initial;
         let r = new Signal(v => {
             state = reducer(v, state);

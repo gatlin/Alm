@@ -3,8 +3,7 @@ export { el } from './vdom';
 
 import {
     Signal,
-    Mailbox,
-    Reducer
+    Mailbox
 } from './base';
 
 import { VTree, render } from './vdom';
