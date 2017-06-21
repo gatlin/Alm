@@ -38,6 +38,15 @@ export class Signal<A, B> implements HasMap<B> {
         return new Signal(x => x);
     }
 
+    static reduce(initial, reducer) {
+        let state = initial;
+        const sig = new Signal(msg => {
+            state = reducer(msg, state);
+            return state;
+        });
+        return sig;
+    }
+
     /**
      * Gives the argument to the signal's internal function and then sends the
      * result to all its listeners.
@@ -98,11 +107,7 @@ export class Signal<A, B> implements HasMap<B> {
      * @return a new Signal attached as a listener to this Signal.
      */
     public reduce(initial: B, reducer: (a: A, b: B) => B) {
-        let state = initial;
-        let r = new Signal(v => {
-            state = reducer(v, state);
-            return state;
-        });
+        let r = Signal.reduce(initial, reducer);
         return this.connect(r);
     }
 
@@ -134,5 +139,15 @@ export class Mailbox<T> extends Signal<T, T> {
 
     public recv(k) {
         super.recv(k);
+    }
+
+    public subscribe(upstream: Signal<any, T>): this {
+        upstream.connect(this);
+        return this;
+    }
+
+    public dispatch(downstream: Signal<T, any>): this {
+        this.connect(downstream);
+        return this;
     }
 }

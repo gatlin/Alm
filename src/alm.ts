@@ -209,7 +209,7 @@ export class App<T> {
         // create the signal graph
         const actions = new Mailbox(null);
         const state = actions.reduce(cfg.state, (action, model) => {
-            if (action) {
+            if (action !== null) {
                 return cfg.update(action, model);
             }
             return model;

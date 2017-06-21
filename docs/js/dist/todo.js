@@ -231,12 +231,6 @@
 	    },
 	    main: (scope) => {
 
-	        const mbox = scope.mailbox();
-
-	        mbox.recv(v => {
-	            console.log(v);
-	        });
-
 	        scope.events.change
 	            .filter(evt => evt.hasClass('toggle'))
 	            .recv(evt => scope.actions.send({
@@ -460,7 +454,7 @@
 	            // create the signal graph
 	            var actions = new base_2.Mailbox(null);
 	            var state = actions.reduce(cfg.state, function (action, model) {
-	                if (action) {
+	                if (action !== null) {
 	                    return cfg.update(action, model);
 	                }
 	                return model;
@@ -594,6 +588,14 @@
 	        Signal.make = function () {
 	            return new Signal(function (x) { return x; });
 	        };
+	        Signal.reduce = function (initial, reducer) {
+	            var state = initial;
+	            var sig = new Signal(function (msg) {
+	                state = reducer(msg, state);
+	                return state;
+	            });
+	            return sig;
+	        };
 	        /**
 	         * Gives the argument to the signal's internal function and then sends the
 	         * result to all its listeners.
@@ -650,11 +652,7 @@
 	         * @return a new Signal attached as a listener to this Signal.
 	         */
 	        Signal.prototype.reduce = function (initial, reducer) {
-	            var state = initial;
-	            var r = new Signal(function (v) {
-	                state = reducer(v, state);
-	                return state;
-	            });
+	            var r = Signal.reduce(initial, reducer);
 	            return this.connect(r);
 	        };
 	        Signal.prototype.numListeners = function () {
@@ -687,6 +685,14 @@
 	        };
 	        Mailbox.prototype.recv = function (k) {
 	            _super.prototype.recv.call(this, k);
+	        };
+	        Mailbox.prototype.subscribe = function (upstream) {
+	            upstream.connect(this);
+	            return this;
+	        };
+	        Mailbox.prototype.dispatch = function (downstream) {
+	            this.connect(downstream);
+	            return this;
 	        };
 	        return Mailbox;
 	    }(Signal));
