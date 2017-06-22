@@ -454,7 +454,7 @@
 	            // create the signal graph
 	            var actions = new base_2.Mailbox(null);
 	            var state = actions.reduce(cfg.state, function (action, model) {
-	                if (action !== null) {
+	                if (action) {
 	                    return cfg.update(action, model);
 	                }
 	                return model;

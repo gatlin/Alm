@@ -155,8 +155,8 @@ export interface Action<A> {
 }
 
 export type Scope = {
-    events: Object;
-    ports: Object;
+    events: any;
+    ports: any;
     actions: Mailbox<any>;
     state: any;
     mailbox: <A>(v: A | void) => Mailbox<A>;
@@ -171,9 +171,9 @@ export class App<T> {
     private gui: boolean;
     private eventRoot: HTMLElement | Document;
     private domRoot: HTMLElement;
-    private events: Object;
+    private events: any;
     private main: (t: any) => void;
-    private ports: Object;
+    private ports: any;
     private state: T;
     private update: <A>(a: A, m: T) => T;
     private render: (t: T) => VTree;
