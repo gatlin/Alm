@@ -108,3 +108,12 @@ textarea#text-event {
     width: 100%;
     border: 1px solid #b9b9b9;
 }
+
+#the-app {
+    margin: 0 auto;
+}
+
+#btns {
+    margin: 0 auto;
+    text-align: center;
+}

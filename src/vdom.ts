@@ -10,26 +10,18 @@
  * Rather than actually compute a set of patches and then apply them in two
  * phases, this algorithm computes patches and then applies them immediately.
  */
-import { Signal, Mailbox } from './base';
 
-/** Helper function for creating VTrees exported to the top level. */
-export function el(tag: string, attrs: any, children: Array<any>) {
-    const children_trees = (typeof children === 'undefined')
-        ? []
-        : children.map((kid, idx) => {
-            return typeof kid === 'string'
-                ? new VTree(kid, [], VTreeType.Text)
-                : kid;
 
-        });
+export type Attrs = {
+    [key: string]: string;
+};
 
-    return new VTree({
-        tag: tag,
-        attrs: attrs
-    }, children_trees, VTreeType.Node);
-}
+export type El = {
+    tag: string;
+    attrs: Attrs;
+};
 
-enum VTreeType {
+export enum VDomType {
     Text,
     Node
 };
@@ -38,31 +30,31 @@ enum VTreeType {
  * A rose tree representing DOM elements. Can represent either an element node
  * or a text node.
  *
- * Because VTree is lighter weight than actual DOM elements an efficient diff
+ * Because VDom is lighter weight than actual DOM elements an efficient diff
  * procedure can be used to compare old and new trees and determine what needs
  * to be done to the actual DOM.
  *
- * The {@link VTree#key} property is used to determine equality. If a `key`
+ * The {@link VDom#key} property is used to determine equality. If a `key`
  * attribute is provided, it will be used. If there is not one, then `id` will
  * be used. Failing that the tag name will be used. If this is a text node, the
  * text itself will be used. I'm open to other possibilities, especially
  * regarding that last one.
  */
-export class VTree {
-    public content: any;
-    public children: Array<VTree>;
-    public treeType: VTreeType;
+export class VDom {
+    public content: El;
+    public children: Array<VDom>;
+    public treeType: VDomType;
     public key: string;
-    private mailbox: Mailbox<any>;
+    public handler: (e: HTMLElement) => void | null;
 
-    constructor(content, children, treeType) {
+    constructor(content, children, treeType, handler = null) {
         this.content = content;
         this.children = children;
         this.treeType = treeType;
-        this.mailbox = null;
+        this.handler = handler;
 
         /* There must be a key */
-        if (treeType === VTreeType.Node) {
+        if (treeType === VDomType.Node) {
             if ('key' in this.content.attrs) {
                 this.key = this.content.attrs.key;
                 delete this.content.attrs.key;
@@ -79,31 +71,19 @@ export class VTree {
         }
     }
 
-    /**
-     * Whenever this VTree is re-rendered the DOM node will be sent to this
-     * Mailbox. This is useful in case an important element is recreated and you
-     * need an up to date reference to it.
-     */
-    subscribe(mailbox: Mailbox<any>): this {
-        this.mailbox = mailbox;
-        return this;
-    }
-
     /** Equality based on the key. */
-    eq(other: VTree): boolean {
+    eq(other: VDom): boolean {
         if (!other) {
             return false;
         }
         return (this.key === other.key);
     }
-
-
 }
 
-/** Constructs an actual DOM node from a {@link VTree}. */
+/** Constructs an actual DOM node from a {@link VDom}. */
 function makeDOMNode(tree): any {
     if (tree === null) { return null; }
-    if (tree.treeType === VTreeType.Text) {
+    if (tree.treeType === VDomType.Text) {
         return document.createTextNode(tree.content);
     }
     const el = document.createElement(tree.content.tag);
@@ -117,16 +97,13 @@ function makeDOMNode(tree): any {
         el.appendChild(child);
     }
 
-    // if a mailbox was subscribed, notify it the element was re-rendered
-    if (tree.mailbox !== null) {
-        tree.mailbox.send(el);
-    }
+    tree.handler(el);
 
     return el;
 }
 
-/** Constructs an initial DOM from a {@link VTree}. */
-function initialDOM(domRoot, tree) {
+/** Constructs an initial DOM from a {@link VDom}. */
+export function initialDOM(domRoot, tree) {
     const root = domRoot;
     const domTree = makeDOMNode(tree);
     while (root.firstChild) {
@@ -145,7 +122,7 @@ enum Op {
 };
 
 // Type alias for readability.
-type Eq<T> = (a: T, b: T) => boolean;
+export type Eq<T> = (a: T, b: T) => boolean;
 
 /**
  * Computes an array of edit operations allowing the first argument to be
@@ -217,7 +194,7 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
 
 /**
  * The name is a little misleading. This takes an old and a current
- * {@link VTree}, the parent node of the one the old tree represents,
+ * {@link VDom}, the parent node of the one the old tree represents,
  * and an (optional) index into that parent's childNodes array.
  *
  * If either of the trees is null or undefined this triggers DOM node creation
@@ -248,8 +225,8 @@ export function diff_dom(parent, a, b, index = 0) {
         return;
     }
 
-    if (b.treeType === VTreeType.Node) {
-        if (a.treeType === VTreeType.Node) {
+    if (b.treeType === VDomType.Node) {
+        if (a.treeType === VDomType.Node) {
             if (a.content.tag === b.content.tag) {
 
                 // contend with attributes. only necessary changes.
@@ -304,22 +281,4 @@ export function diff_dom(parent, a, b, index = 0) {
             makeDOMNode(b),
             parent.childNodes[index]);
     }
-}
-
-/**
- * This reduces a Signal producing VTrees.
- *
- * @param view_signal - the Signal of VTrees coming from the App.
- * @param domRoot - The root element we will be rendering the VTree in.
- */
-export function render(view_signal, domRoot) {
-    view_signal.reduce(null, (update, tree) => {
-        if (tree === null) {
-            initialDOM(domRoot, update);
-        } else {
-
-            diff_dom(domRoot, tree, update);
-        }
-        return update;
-    });
 }

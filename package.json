@@ -1,6 +1,8 @@
 {
     "name": "alm",
-    "version": "0.1.0",
+    "version": "1.0.0",
+    "main": "lib/alm.js",
+    "typings": "lib/alm.d.ts",
     "description": "A Little Module for Application Lifecycle Management",
     "repository": {
         "type": "git",
@@ -8,16 +10,19 @@
     },
     "author": "Gatlin Johnson",
     "scripts": {
-        "test": "./tests/*.ts"
+        "test": "./tests/*.ts",
+        "clean": "rm -rf _bundles lib build",
+        "compile": "npm run clean && tsc",
+        "bundle": "NODE_ENV=production webpack",
+        "docs": "cd docs && webpack"
     },
     "devDependencies": {
-        "del": "^2.2.2",
-        "gulp": "^3.9.1",
-        "gulp-serve": "^1.4.0",
-        "gulp-typescript": "^3.0.1",
-        "gulp-webpack": "^1.5.0",
+        "@types/node": "^8.0.50",
         "tap": "^7.1.2",
         "typescript": "^2.0.3",
-        "webpack": "^1.13.2"
+        "webpack": "^3.8.1"
+    },
+    "dependencies": {
+        "awesome-typescript-loader": "^3.3.0"
     }
 }

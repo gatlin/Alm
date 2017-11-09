@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": false,
+        "removeComments": true,
+        "target": "es5",
+        "types": [
+            "node"
+        ]
+    },
+    "files": [ "./src/main.ts" ]
+}

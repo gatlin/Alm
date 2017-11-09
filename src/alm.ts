@@ -1,20 +1,164 @@
-export * from './base';
-export { el } from './vdom';
+/**
+ * @module alm
+ *
+ * The main entry point for the alm library.
+ */
 
-import {
-    Signal,
-    Mailbox
-} from './base';
-
-import { VTree, render } from './vdom';
+import { VDom, VDomType, initialDOM, diff_dom } from './vdom';
 
 /**
- * Wraps system events and provides some convenience methods.
- * @constructor
- * @param evt - The raw browser event value.
+ * Messages consumed by a {@link Reducer}. Messages are tagged with a type of
+ * your choosing (likely an Enum of some kind).
+ */
+export type Message<T> = {
+    'type': T;
+    data?: any;
+};
+
+/**
+ * A left fold on your application state which consumes {@link Message} values
+ * and a state object and returns a modified state object.
+ */
+export type Reducer<S, Action> = (state: S, action: Message<Action>) => S;
+
+/**
+ * A function to combine multiple {@link Reducer}s, each governing one piece of
+ * the total state.
+ *
+ * @param reducers - An object whose keys correspond to the top-level state
+ * keys. Each corresponding value is a {@link Reducer} for that part of the
+ * state.
+ */
+export function combineReducers(reducers) {
+    const reducerKeys = Object.keys(reducers);
+    return (action, state = {}) => {
+        let hasChanged = false;
+        const newState = {};
+        for (let i = 0; i < reducerKeys.length; i++) {
+            const key = reducerKeys[i];
+            const reducer = reducers[key];
+            const previousState = state[key];
+            const nextState = reducer(action, previousState);
+            newState[key] = nextState;
+            hasChanged = hasChanged || nextState !== previousState;
+        }
+        return hasChanged ? newState : state;
+    };
+}
+
+/**
+ * Manages application state using an initial state value and a {@link Reducer}.
+ */
+export class Store<S, Action> {
+
+    private subscribers: Array<() => void>;
+
+    constructor(private state: S, private reducer: Reducer<S, Action>) {
+        this.subscribers = [];
+    }
+
+    /**
+     * Dispatch a {@link Message} to the {@link Reducer}.
+     *
+     * @param action - The message describing which action to perform on the
+     * state.
+     * @return The store.
+     */
+    public dispatch(action: Message<Action>): this {
+        this.state = this.reducer(this.state, action);
+        this.subscribers.forEach(update => { update(); });
+        return this;
+    }
+
+    /**
+     * The Store keeps an array of functions to call whenever the state changes.
+     *
+     * @param subscriber - A function to call on each state change.
+     * @return A function which may be used to unsubscribe the function.
+     */
+    public subscribe(subscriber) {
+        this.subscribers.push(subscriber);
+        // hand back a way to unsubscribe
+        return () => {
+            const idx = this.subscribers.indexOf(subscriber);
+            this.subscribers.splice(idx, 1);
+        };
+    }
+
+    /**
+     * A getter for the state.
+     *
+     * @return The sealed state.
+     */
+    public getState() {
+        return Object.seal(this.state);
+    }
+}
+
+/**
+ * An object made available to every {@link Component}.
+ *
+ * A Context contains a pointer to the application {@link Store} as well as a
+ * function which can be used to register event handlers.
+ */
+export type Context<S, A> = {
+    store: Store<S, A>;
+    handle: (e: HTMLElement, h: Object) => void;
+};
+
+/**
+ * The foundation of a user interface. A View converts a {@link Context} into a
+ * {@link VDom}.
+ */
+export type View<S, A> = (c: Context<S, A>) => VDom;
+
+/**
+ * Convenience function for constructing a {@link View}.
+ *
+ * @param ctor - A string or a {@link Component}. A string value should be an
+ * HTML tag.
+ * @param props - Properties to set on the HTML element or the component.
+ * @param _children - An array of child {@link View}s.
+ * @return A new {@link View}.
+ */
+export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
+    return ctx => {
+        let eventHandlers = {};
+        if (props.on) {
+            eventHandlers = props.on;
+            delete props.on;
+        }
+
+        const children = _children
+            .map((child, idx) => {
+                return typeof child === 'string'
+                    ? new VDom(child, [], VDomType.Text)
+                    : child(ctx);
+            });
+
+        const handler = e => ctx.handle(e, eventHandlers);
+
+        const view = typeof ctor === 'string'
+            ? new VDom({
+                tag: ctor,
+                attrs: props
+            }, children, VDomType.Node, handler)
+            : ctor(props)(ctx);
+
+        return view;
+    };
+}
+
+/**
+ * A Component is a pure function from an argument to a {@link View}.
+ */
+export type Component<Props> = (props: Props) => View<any, any>;
+
+/**
+ * Wraps around browser events.
  */
 export class AlmEvent {
-    private readonly raw: any; // See [1] at the bottom of the code
+    private readonly raw: any;
     private readonly classes: Array<string>;
     private readonly id: string;
     private readonly value: any;
@@ -22,7 +166,7 @@ export class AlmEvent {
     constructor(evt) {
         this.raw = evt;
         this.classes = evt.target.className.trim().split(/\s+/g) || [];
-        this.id = evt.target.id;
+        this.id = evt.target.id || '';
     }
 
     public hasClass(klass) {
@@ -38,11 +182,7 @@ export class AlmEvent {
     }
 
     public getValue() {
-        return this.raw.target.value;
-    }
-
-    public getRaw() {
-        return this.raw;
+        return this.value;
     }
 
     public class_in_ancestry(klass: string) {
@@ -55,6 +195,7 @@ export class AlmEvent {
                 done = true;
                 break;
             }
+
             let klasses = elem.className.trim().split(/\s+/g) || [];
             if (klasses.indexOf(klass) !== -1) {
                 result = elem;
@@ -63,65 +204,26 @@ export class AlmEvent {
             else if (elem.parentNode) {
                 elem = elem.parentNode;
             }
+
             else {
                 done = true;
             }
+
         }
         return result;
     }
 }
 
 /**
- * Constructs signals emitting whichever browser event names you pass in.
- * @param {Array<string>} evts - The event names you want signals for.
- * @return {Array<Signal>} The event signals.
+ * The configuration object required to create an {@link Alm} app.
  */
-function makeEvents(evts): Object {
-    const events = {};
-    for (let i = 0; i < evts.length; i++) {
-        let evtName = evts[i];
-        events[evtName] = new Signal(evt => new AlmEvent(evt));
-    }
-    return events;
-}
-
-/**
- * Builds the port signals for an App.
- * @param {Object} portCfg - An object whose keys name arrays of desired port
- *                           names.
- *                           Eg, { outbound: ['port1','port2' ],
- *                                 inbound: ['port3'] }.
- *
- * @return {Object} ports - An object with the same keys but this time they
- *                          point to objects whose keys were in the original
- *                          arrays and whose values are signals.
- */
-function makePorts(portCfg) {
-    // If it is simply an array then make ports for each string
-    if (Array.isArray(portCfg)) {
-        const _ports = {};
-        for (let i = 0; i < portCfg.length; i++) {
-            const portName = portCfg[i];
-            _ports[portName] = Signal.make();
-        }
-        return _ports;
-    }
-
-    let ports = (typeof portCfg === 'undefined' || portCfg === null)
-        ? { outbound: [], inbound: [] }
-        : portCfg;
-
-    for (let key in ports) {
-        const portNames = ports[key];
-        const portSpace = {};
-        for (let i = 0; i < portNames.length; i++) {
-            const portName = portNames[i];
-            portSpace[portName] = Signal.make();
-        }
-        ports[key] = portSpace;
-    }
-    return ports;
-}
+export type AppConfig<State, Action> = {
+    initialState: State;
+    reducer: Reducer<State, Action>;
+    view: View<State, Action>,
+    eventRoot?: HTMLElement | Document | string;
+    domRoot?: HTMLElement | string;
+};
 
 const standardEvents = [
     'click',
@@ -136,56 +238,20 @@ const standardEvents = [
     'load'
 ];
 
-/** The type of the object used to configure an App.  */
-export type AppConfig<T> = {
-    state: T;
-    update: (a: any, m: T) => T;
-    main: (t: any) => void;
-    gui?: boolean;
-    eventRoot?: HTMLElement | Document | string;
-    domRoot?: HTMLElement | string;
-    render?: (t: T) => VTree;
-    ports?: any; // See [2] at the bottom
-    extraEvents?: Array<string>;
-};
-
-export interface Action<A> {
-    type: A;
-    data?: any;
-}
-
-export type Scope = {
-    events: any;
-    ports: any;
-    actions: Mailbox<any>;
-    state: any;
-    mailbox: <A>(v: A | void) => Mailbox<A>;
-};
-
 /**
- * A self-contained application.
- * @constructor
- * @param {AppConfig} cfg - the configuration object.
+ * The application lifecycle manager. It listens for top-level events and binds
+ * to part of the DOM to display the user interface.
  */
-export class App<T> {
-    private gui: boolean;
+export class Alm<State, Action> {
+    public readonly store: Store<State, Action>;
+    private view: View<State, Action>;
     private eventRoot: HTMLElement | Document;
     private domRoot: HTMLElement;
-    private events: any;
-    private main: (t: any) => void;
-    private ports: any;
-    private state: T;
-    private update: <A>(a: A, m: T) => T;
-    private render: (t: T) => VTree;
-    private scope: Scope;
+    private events: object;
+    private gensymnumber: number = 0;
 
-    constructor(cfg: AppConfig<T>) {
-
-        this.state = cfg.state;
-
-        this.gui = typeof cfg.gui === 'undefined'
-            ? true
-            : cfg.gui;
+    constructor(cfg: AppConfig<State, Action>) {
+        this.store = new Store(cfg.initialState, cfg.reducer);
 
         this.eventRoot = typeof cfg.eventRoot === 'string'
             ? document.getElementById(cfg.eventRoot)
@@ -195,117 +261,94 @@ export class App<T> {
 
         this.domRoot = typeof cfg.domRoot === 'string'
             ? document.getElementById(cfg.domRoot)
-            : typeof cfg.domRoot === 'undefined'
-                ? document.body
-                : cfg.domRoot;
+            : cfg.domRoot;
 
-        const events = standardEvents.concat(typeof cfg.extraEvents !== 'undefined'
-            ? cfg.extraEvents
-            : []);
-
-        this.events = makeEvents(events);
-        this.ports = makePorts(cfg.ports);
-
-        // create the signal graph
-        const actions = new Mailbox(null);
-        const state = actions.reduce(cfg.state, (action, model) => {
-            if (action !== null) {
-                return cfg.update(action, model);
-            }
-            return model;
-        });
-
-        this.scope = Object.seal({
-            events: this.events,
-            ports: this.ports,
-            actions: actions,
-            state: state,
-            mailbox: v => new Mailbox(v)
-        });
-
-        cfg.main(this.scope);
-
-        this.render = this.gui ? cfg.render : null;
+        this.view = cfg.view;
+        this.events = {};
     }
 
-    /**
-     * Internal method which registers a given signal to emit upstream browser
-     * events.
-     */
-    private registerEvent(evtName, sig) {
-        const fn = (evt) => sig.send(evt);
-        this.eventRoot.addEventListener(evtName, fn, true);
-    }
-
-    /**
-     * Provides access to the application scope for any other configuration.
-     *
-     * @param f - A function which accepts a scope and returns nothing.
-     * @return @this
-     */
-    public editScope(cb) {
-        cb(this.scope);
-        return this;
-    }
-
-    /**
-     * Set the root element in the page to which we will attach listeners.
-     * @param er - Either an HTML element, the whole document, or an element ID
-     *             as a string.
-     * @return @this
-     */
-    public setEventRoot(er: HTMLElement | Document | string): this {
-        this.eventRoot = typeof er === 'string'
-            ? document.getElementById(er)
-            : er;
-        return this;
-    }
-
-    /**
-     * Set the root element in the page in which we will render.
-     * @param er - Either an HTML element, the whole document, or an element ID
-     *             as a string.
-     * @return @this
-     */
-    public setDomRoot(dr: HTMLElement | string): this {
-        this.domRoot = typeof dr === 'string'
-            ? document.getElementById(dr)
-            : dr;
-        return this;
-    }
-
-    /**
-     * This method actually registers the desired events and creates the ports.
-     * @return An object containing the App's port signals and a state update
-     * signal.
-     */
     public start() {
-        /* Find all the event listeners the user cared about and bind those */
-        for (let evtName in this.events) {
-            let sig = this.events[evtName];
-            if (sig.numListeners() > 0) {
-                this.registerEvent(evtName, sig);
+        this.events = {};
+        let store = this.store;
+        let handle = (e, handlers) => {
+            let eId;
+            if (e.hasAttribute('data-alm-id')) {
+                eId = e.getAttribute('data-alm-id');
+            } else {
+                eId = this.gensym();
+                e.setAttribute('data-alm-id', eId);
+            }
+            for (let evtName in handlers) {
+                if (!(evtName in this.events)) {
+                    this.events[evtName] = {};
+                    this.registerEvent(evtName, this.handleEvent);
+                }
+                this.events[evtName][eId] = handlers[evtName];
+            }
+        };
+        let context = { store, handle };
+        let vtree = this.view(context);
+        initialDOM(this.domRoot, vtree);
+
+        this.store.subscribe(() => {
+            const updated = this.view(context);
+            diff_dom(this.domRoot, vtree, updated);
+            vtree = updated;
+        });
+    }
+
+    private handleEvent(evt) {
+        const evtName = evt.type;
+        if (this.events[evtName]) {
+            if (evt.target.hasAttribute('data-alm-id')) {
+                const almId = evt.target.getAttribute('data-alm-id');
+                if (this.events[evtName][almId]) {
+                    this.events[evtName][almId](new AlmEvent(evt));
+                }
             }
         }
+    }
 
-        if (this.gui) {
-            const view = this.scope.state.map(this.render);
-            render(view, this.domRoot);
+    private gensym() {
+        return 'node-' + (this.gensymnumber++).toString();
+    }
+
+    /**
+     * TBD
+     *
+     * @param {Array<string>} evts - The event names you want signals for.
+     * @return {Array<Signal>} The event signals.
+     */
+    private makeEvents(evts): Object {
+        const events = {};
+        for (let i = 0; i < evts.length; i++) {
+            let evtName = evts[i];
+            // do something with the event name
+            // events[evtName] = evt => new AlmEvent(evt);
         }
+        return events;
+    }
 
-        return {
-            ports: this.scope.ports,
-            state: this.scope.state
-        };
+    /**
+     * Register an event listener for the specified event.
+     */
+    private registerEvent(evtName, cb) {
+        this.eventRoot.addEventListener(evtName, cb.bind(this), true);
     }
 }
 
-/*
-[1]: The proper thing for it to wrap would be the type `Event`. However I also
-want to be able to make assumptions about the target because I'll be getting
-them exclusively from the browser. I do not know the proper TypeScript-fu yet
-for expressing this properly.
-
-[2]: I don't know the typescript way of saying "an object of string literal keys
-which point to arrays of names. any number of such keys, or none at all."
-*/
+/**
+ * Connect the store to a pure component.
+ */
+export function connect(mapState = null, mapDispatch = null) {
+    return component => (props = {}) => ctx => {
+        const store = ctx.store;
+        const state = store.getState();
+        const mappedState = mapState ? mapState(state) : {};
+        const mappedDispatch = mapDispatch
+            ? mapDispatch(store.dispatch.bind(store))
+            : {};
+        const finalProps = { ...props, ...mappedState, ...mappedDispatch };
+        return component(finalProps)(ctx);
+    };
+}
