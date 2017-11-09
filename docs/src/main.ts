@@ -82,8 +82,3 @@ const app = new Alm<State, Actions>({
     domRoot: 'app-root'
 });
 app.start();
-
-app.store.dispatch(incrAction());
-app.store.dispatch(incrAction());
-app.store.dispatch(decrAction());
-app.store.dispatch(incrAction());

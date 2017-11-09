@@ -285,6 +285,12 @@ export class Alm<State, Action> {
                 }
                 this.events[evtName][eId] = handlers[evtName];
             }
+
+            return () => {
+                for (let evtName in handlers) {
+                    delete this.events[evtName][eId];
+                }
+            };
         };
         let context = { store, handle };
         let vtree = this.view(context);
@@ -311,22 +317,6 @@ export class Alm<State, Action> {
 
     private gensym() {
         return 'node-' + (this.gensymnumber++).toString();
-    }
-
-    /**
-     * TBD
-     *
-     * @param {Array<string>} evts - The event names you want signals for.
-     * @return {Array<Signal>} The event signals.
-     */
-    private makeEvents(evts): Object {
-        const events = {};
-        for (let i = 0; i < evts.length; i++) {
-            let evtName = evts[i];
-            // do something with the event name
-            // events[evtName] = evt => new AlmEvent(evt);
-        }
-        return events;
     }
 
     /**

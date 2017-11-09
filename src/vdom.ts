@@ -45,13 +45,15 @@ export class VDom {
     public children: Array<VDom>;
     public treeType: VDomType;
     public key: string;
-    public handler: (e: HTMLElement) => void | null;
+    public onCreate: (e: HTMLElement) => (() => void) | null;
+    public onDestroy: () => void | null;
 
     constructor(content, children, treeType, handler = null) {
         this.content = content;
         this.children = children;
         this.treeType = treeType;
-        this.handler = handler;
+        this.onCreate = handler;
+        this.onDestroy = null;
 
         /* There must be a key */
         if (treeType === VDomType.Node) {
@@ -97,7 +99,7 @@ function makeDOMNode(tree): any {
         el.appendChild(child);
     }
 
-    tree.handler(el);
+    tree.onDestroy = tree.onCreate(el);
 
     return el;
 }
@@ -214,6 +216,9 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
 export function diff_dom(parent, a, b, index = 0) {
 
     if (typeof b === 'undefined' || b === null) {
+        if (parent.childNodes[index].onDestroy) {
+            parent.childNodes[index].onDestroy();
+        }
         parent.removeChild(parent.childNodes[index]);
         return;
     }
@@ -277,6 +282,9 @@ export function diff_dom(parent, a, b, index = 0) {
     } else {
         // different types of nodes, `b` is a text node, or they have different
         // tags. in all cases just replace the DOM element.
+        if (parent.childNodes[index].onDestroy) {
+            parent.childNodes[index].onDestroy();
+        }
         parent.replaceChild(
             makeDOMNode(b),
             parent.childNodes[index]);
