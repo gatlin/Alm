@@ -1,84 +1,58 @@
 import {
     el,
-    Component,
-    Reducer,
     connect,
+    makeReducer,
     Alm
 } from '../../src/alm';
 
 type State = {
-    num: number;
+    inputText: string;
 };
 
 enum Actions {
-    Increment,
-    Decrement
+    UpdateText
 };
 
-const incrAction = () => ({
-    type: Actions.Increment
+const updateTextAction = data => ({
+    type: Actions.UpdateText,
+    data
 });
 
-const decrAction = () => ({
-    type: Actions.Decrement
-});
-
-const appReducer: Reducer<State, Actions> = (state, action) => {
-    switch (action.type) {
-        case Actions.Increment:
-            return { ...state, num: state.num + 1 };
-
-        case Actions.Decrement:
-            return { ...state, num: state.num - 1 };
-
-        default:
-            return state;
+const reducer = makeReducer({
+    inputText: (state: string, action) => {
+        switch (action.type) {
+            case Actions.UpdateText:
+                return action.data;
+            default:
+                return state;
+        };
     }
-};
-
-const ComponentA = ({ num }) =>
-    el('h1', { 'id': 'heading' }, [num.toString()]);
-
-const mapStateToProps = ({ num }) => ({
-    num
 });
 
-const mapDispatchToProps = dispatch => ({
-    incr: () => dispatch(incrAction()),
-    decr: () => dispatch(decrAction())
-});
-
-const ViewA = connect(mapStateToProps, mapDispatchToProps)(ComponentA);
-
-const ComponentB = ({ incr, decr }) =>
+const MainComponent = ({ inputText, updateText }) =>
     el('div', { 'id': 'the-app' }, [
-        el(ViewA),
-        el('div', { 'id': 'btns' }, [
-            el('button', {
-                on: {
-                    click: evt => incr()
-                }
-            }, ['Increment']),
-            el('button', {
-                on: {
-                    click: evt => decr()
-                }
-            }, ['Decrement'])
-        ])
+        el('h1', {}, ['Alm']),
+        el('input', {
+            type: 'text',
+            value: inputText,
+            on: {
+                input: evt => updateText(evt.getValue())
+            }
+        }),
+        el('p', {}, [inputText])
     ]);
 
-const ViewB = connect(
-    _ => { },
+const MainView = connect(
+    ({ inputText }) => ({ inputText }),
     dispatch => ({
-        incr: () => dispatch(incrAction()),
-        decr: () => dispatch(decrAction())
+        updateText: t => dispatch(updateTextAction(t))
     })
-)(ComponentB);
+)(MainComponent);
 
 const app = new Alm<State, Actions>({
-    initialState: { num: 5 },
-    reducer: appReducer,
-    view: ViewB(),
+    initialState: { inputText: '' },
+    reducer,
+    view: MainView(),
     domRoot: 'app-root'
 });
 app.start();

@@ -29,16 +29,16 @@ export type Reducer<S, Action> = (state: S, action: Message<Action>) => S;
  * keys. Each corresponding value is a {@link Reducer} for that part of the
  * state.
  */
-export function combineReducers(reducers) {
+export function makeReducer(reducers) {
     const reducerKeys = Object.keys(reducers);
-    return (action, state = {}) => {
+    return (state, action) => {
         let hasChanged = false;
         const newState = {};
         for (let i = 0; i < reducerKeys.length; i++) {
             const key = reducerKeys[i];
             const reducer = reducers[key];
             const previousState = state[key];
-            const nextState = reducer(action, previousState);
+            const nextState = reducer(previousState, action);
             newState[key] = nextState;
             hasChanged = hasChanged || nextState !== previousState;
         }
@@ -167,6 +167,7 @@ export class AlmEvent {
         this.raw = evt;
         this.classes = evt.target.className.trim().split(/\s+/g) || [];
         this.id = evt.target.id || '';
+        this.value = evt.target.value;
     }
 
     public hasClass(klass) {
