@@ -5,6 +5,13 @@ import {
     Alm
 } from '../../src/alm';
 
+// COUNTER example
+
+enum CounterActions {
+    Increment,
+    Decrement
+};
+
 const CounterComponent = ({ counter, increment, decrement }) =>
     el('div', {}, [
         el('p', {}, [counter.toString()]),
@@ -19,14 +26,16 @@ const CounterComponent = ({ counter, increment, decrement }) =>
 const CounterView = connect(
     counter => ({ counter }),
     dispatch => ({
-        increment: () => dispatch({ type: true }),
-        decrement: () => dispatch({ type: false })
+        increment: () => dispatch({ type: CounterActions.Increment }),
+        decrement: () => dispatch({ type: CounterActions.Decrement })
     })
 )(CounterComponent);
 
 const counterApp = new Alm({
-    initialState: 0,
-    reducer: (state, action) => action.type ? state + 1 : state - 1,
+    model: 0,
+    update: (state, action) => action.type === CounterActions.Increment
+        ? state + 1
+        : state - 1,
     view: CounterView(),
     domRoot: 'counter-app',
     eventRoot: 'counter-app'
@@ -69,7 +78,9 @@ const EventComponent = ({ inputText, count, overLimit, updateText }) =>
                 input: evt => updateText(evt.getValue())
             }
         }),
-        el('p', {}, [count.toString() + ' / 140 characters'])
+        el('p', {
+            'class': overLimit ? 'warning ' : ''
+        }, [count.toString() + ' / 140 characters'])
     ]);
 
 const EventView = connect(
@@ -83,11 +94,102 @@ const EventView = connect(
 )(EventComponent);
 
 const eventApp = new Alm({
-    initialState: { inputText: '', count: 0, overLimit: false },
-    reducer: eventReducer,
+    model: { inputText: 'Type here!', count: 0, overLimit: false },
+    update: eventReducer,
     view: EventView(),
     eventRoot: 'event-app',
     domRoot: 'event-app'
 });
 
 eventApp.start();
+
+// ASYNC example
+type AsyncState = {
+    pageUrl: string;
+    pageText: string | null;
+    requesting: boolean;
+};
+
+enum AsyncActions {
+    RequestPage,
+    SetPageText,
+    SetPageUrl
+};
+
+const setPageUrlAction = data => ({
+    type: AsyncActions.SetPageUrl,
+    data
+});
+
+const setPageTextAction = data => ({
+    type: AsyncActions.SetPageText,
+    data
+});
+
+const requestPageAction = () => (dispatch, state) => {
+    const r = new XMLHttpRequest();
+    r.open("GET", state().pageUrl, true);
+    r.onreadystatechange = () => {
+        if (r.readyState !== 4 || r.status !== 200) {
+            return;
+        }
+        dispatch(setPageTextAction(r.responseText));
+    };
+    r.send();
+    return {
+        type: AsyncActions.RequestPage
+    };
+};
+
+const asyncReducer = (state, action) => {
+    switch (action.type) {
+        case AsyncActions.RequestPage:
+            return { ...state, requesting: true };
+        case AsyncActions.SetPageText:
+            return { ...state, requesting: false, pageText: action.data };
+        case AsyncActions.SetPageUrl:
+            return { ...state, pageUrl: action.data };
+        default:
+            return state;
+    }
+};
+
+const AsyncComponent = props =>
+    el('div', {}, [
+        el('h3', {}, ["Load web page"]),
+        el('input', {
+            type: 'text',
+            value: props.pageUrl,
+            on: {
+                input: evt => props.setPageUrl(evt.getValue())
+            }
+        }),
+        el('button', {
+            on: {
+                click: evt => props.requestPage()
+            }
+        }, ['Load Page']),
+        el('p', {}, [props.requesting
+            ? 'Loading ...'
+            : 'Number of characters received: ' + props.pageText.length
+        ])
+    ]);
+
+const AsyncView = connect(
+    state => state,
+    dispatch => ({
+        setPageUrl: url => dispatch(setPageUrlAction(url)),
+        requestPage: () => dispatch(requestPageAction()),
+        setPageText: text => dispatch(setPageTextAction(text))
+    })
+)(AsyncComponent);
+
+const asyncApp = new Alm({
+    model: { pageText: '', requesting: false, pageUrl: 'http://niltag.net' },
+    update: asyncReducer,
+    view: AsyncView(),
+    eventRoot: 'async-app',
+    domRoot: 'async-app'
+});
+
+asyncApp.start();

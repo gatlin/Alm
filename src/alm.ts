@@ -19,7 +19,7 @@ export type Message<T> = {
  * A left fold on your application state which consumes {@link Message} values
  * and a state object and returns a modified state object.
  */
-export type Reducer<S, Action> = (state: S, action: Message<Action>) => S;
+export type Reducer<S, A> = (state: S, action: Message<A>) => S;
 
 /**
  * A function to combine multiple {@link Reducer}s, each governing one piece of
@@ -28,6 +28,7 @@ export type Reducer<S, Action> = (state: S, action: Message<Action>) => S;
  * @param reducers - An object whose keys correspond to the top-level state
  * keys. Each corresponding value is a {@link Reducer} for that part of the
  * state.
+ * @return A composite reducer.
  */
 export function makeReducer(reducers) {
     const reducerKeys = Object.keys(reducers);
@@ -47,6 +48,15 @@ export function makeReducer(reducers) {
 }
 
 /**
+ * Alternatively asynchronous messages may be dispatched. These accept a
+ * {@link Store#dispatch} function along with a thunk returning the application
+ * state and return a {@link Message}. This allows an action to dispatch other
+ * actions.
+ */
+export type AsyncMessage<S, A> =
+    (d: (a: Message<A>) => void, s: () => S) => Message<A>;
+
+/**
  * Manages application state using an initial state value and a {@link Reducer}.
  */
 export class Store<S, Action> {
@@ -61,11 +71,17 @@ export class Store<S, Action> {
      * Dispatch a {@link Message} to the {@link Reducer}.
      *
      * @param action - The message describing which action to perform on the
-     * state.
+     * state. Can either be a message or a continuation which asks for the
+     * dispatch function before producing the message.
      * @return The store.
      */
-    public dispatch(action: Message<Action>): this {
-        this.state = this.reducer(this.state, action);
+    public dispatch(action: Message<Action> | AsyncMessage<S, Action>): this {
+        this.state = this.reducer(
+            this.state,
+            typeof action === 'function'
+                ? action(this.dispatch.bind(this), this.getState.bind(this))
+                : action
+        );
         this.subscribers.forEach(update => { update(); });
         return this;
     }
@@ -219,25 +235,12 @@ export class AlmEvent {
  * The configuration object required to create an {@link Alm} app.
  */
 export type AppConfig<State, Action> = {
-    initialState: State;
-    reducer: Reducer<State, Action>;
+    model: State;
+    update: Reducer<State, Action>;
     view: View<State, Action>,
     eventRoot?: HTMLElement | Document | string;
     domRoot?: HTMLElement | string;
 };
-
-const standardEvents = [
-    'click',
-    'dblclick',
-    'keyup',
-    'keydown',
-    'keypress',
-    'blur',
-    'focusout',
-    'input',
-    'change',
-    'load'
-];
 
 /**
  * The application lifecycle manager. It listens for top-level events and binds
@@ -252,7 +255,7 @@ export class Alm<State, Action> {
     private gensymnumber: number = 0;
 
     constructor(cfg: AppConfig<State, Action>) {
-        this.store = new Store(cfg.initialState, cfg.reducer);
+        this.store = new Store(cfg.model, cfg.update);
 
         this.eventRoot = typeof cfg.eventRoot === 'string'
             ? document.getElementById(cfg.eventRoot)

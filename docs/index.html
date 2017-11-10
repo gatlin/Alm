@@ -13,18 +13,21 @@
         <div id="column-container">
             <div class="row">
                 <p class="lead">This is a website for
-                    <a href="https://github.com/gatlin/alm">Alm, a neat web
-                        application framework I made.</a> The README on GitHub
-                    has a lot of information. You can also see
-                    <a href="todo.html">a more involved, obligatory todo list
-                        app</a> as well as
-                    <a
-                        href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its    
-                        code</a>.</p>
+                    <a href="https://github.com/gatlin/alm">Alm, an application
+                        lifecycle manager</a> written in TypeScript.
+                </p>
                 <p class="lead">
                     Alm's purpose is to help you <em>organize</em> your web
                     application in a maintainable, modular, and type-safe
-                    way. It is heavily inspired by React and Elm.
+                    way. It is heavily inspired by React, Elm, and Redux.
+                </p>
+                <p class="lead">
+                    Alm enforces a <em>reactive</em> application
+                    design. Reactive applications can be thought of as
+                    essentially a pair of functions: one which accepts
+                    <em>events</em> and produces updated <em>state</em>; and
+                    one which accepts a <em>state</em> and produces a
+                    <em>view</em>.
                 </p>
                 <p class="lead">If you have any questions or comments or free
                     money don't hesitate to reach me at
@@ -33,12 +36,71 @@
             <div class="row">
                 <div class="explanation">
                     <h2>Getting started: a simple counter.</h2>
-                    <p class="explain">Here is an explanation of how this shit goes.</p>
+                    <p class="explain">
+                        Alm applications accept an initial state
+                        <strong>model</strong>, an <strong>update</strong>
+                        function, and a <strong>view</strong> functon.
+                    </p>
+                    <p class="explain">
+                        In this example the <strong>model</strong> is a number,
+                        initially <code>0</code>. There are two actions we can
+                        perform: <code>Increment</code> or
+                        <code>Decrement</code>.
+                    </p>
+                    <p class="explain">
+                        The <strong>update</strong> function is straightforward:
+                        <pre><code class="typescript">
+(state, action) =>
+    action.type === CounterActions.Increment
+        ? state + 1
+        : state - 1
+                        </code></pre>
+                        If the <em>type</em> of the message is
+                        <code>CounterActions.Increment</code> then add
+                        <code>1</code> to the state; otherwise, subtract
+                        <code>1</code>.
+                    </p>
+                    <p class="explain">
+                        The <strong>view</strong> is defined by creating a
+                        <code>Component</code>, a function which accepts some
+                        object of data <em>properties</em> and returns a
+                        <code>View</code>.
+                    </p>
+                    <p class="explain">
+                        A <code>Component</code> does not specify or know how
+                        its properties are set. To connect it to the application
+                        state the <code>connect</code> function is used.
+                    </p>
+                    <p class="explain">
+                        <code>connect</code> accepts two functions:
+                        <ol>
+                            <li>
+                                A function of the type
+                                <code>state -> properties</code>; and
+                            </li>
+                            <li>
+                                A function of the type
+                                <code>(message -> state) -> properties</code>,
+                                giving a <code>Component</code> a way to
+                                dispatch <em>events</em>.
+                            </li>
+                        </ol>
+                        The result is a new <code>Component</code>.
+                    </p>
+                    <p class="explain">
+                        Alm exports the convenience function <code>el</code> to
+                        construct a <em>Virtual DOM</em> easily.
+                    </p>
                 </div>
                 <div class="example" id="src-1">
                     <div id="counter-app" class="app"></div>
                     <pre>
                         <code class="typescript">
+enum CounterActions {
+    Increment,
+    Decrement
+};
+
 const CounterComponent = ({ counter, increment, decrement }) =>
     el('div', {}, [
         el('p', {}, [counter.toString()]),
@@ -53,14 +115,16 @@ const CounterComponent = ({ counter, increment, decrement }) =>
 const CounterView = connect(
     counter => ({ counter }),
     dispatch => ({
-        increment: () => dispatch({ type: true }),
-        decrement: () => dispatch({ type: false })
+        increment: () => dispatch({ type: CounterActions.Increment }),
+        decrement: () => dispatch({ type: CounterActions.Decrement })
     })
 )(CounterComponent);
 
 const counterApp = new Alm({
-    initialState: 0,
-    reducer: (state, action) => action.type ? state + 1 : state - 1,
+    model: 0,
+    update: (state, action) => action.type === CounterActions.Increment
+        ? state + 1
+        : state - 1,
     view: CounterView(),
     domRoot: 'counter-app',
     eventRoot: 'counter-app'
@@ -74,25 +138,65 @@ counterApp.start();
 
             <div class="row">
                 <div class="explanation">
-                    <h2>Events!</h2>
+                    <h2>The virtual DOM and event handling</h2>
                     <p class="explain">
-                        Events are communicated via <em>signals</em>.
+                        In Alm the user interface is described using a
+                        <em>virtual DOM</em>. A virtual DOM is a lightweight
+                        imitation of the actual browser DOM which can be created
+                        and manipulated much more efficiently than the real
+                        thing.
                     </p>
                     <p class="explain">
-                        When you create your <code>App</code> a number of
-                        default event signals are created and given to you via
-                        the <em>scope</em> argument to your <code>main</code>
-                        function. When your app finally <code>start</code>s up
-                        only those events you actually subscribed to will actually be
-                        registered.
+                        Each time the state is updated the virtual DOM is
+                        created, compared to the previous one, and the
+                        <em>real</em> DOM is manipulated automatically. The
+                        result is declarative, straightforward code.
                     </p>
                     <p class="explain">
-                        The actual values emitted <em>wrap around</em> raw
-                        browser events and provide some simple convenience
-                        methods - <code>#getId</code>, <code>#getValue</code>,
-                        and <code>#hasClass</code>, all of which provide
-                        information about the event target. And the raw event is
-                        only a call to <code>#getRaw</code> away.
+                        The <code>el</code> function produces a virtual DOM and
+                        accepts three arguments:
+                        <ol>
+                            <li>
+                                A string consisting of the XML element, or a
+                                <code>Component</code> function;
+                            </li>
+                            <li>
+                                An attribute object for the element (or a
+                                property object for the <code>Component</code>);
+                                and
+                            </li>
+                            <li>
+                                An optional array of children.
+                            </li>
+                        </ol>
+                    </p>
+                    <p class="explain">
+                        The special attribute <code>on</code> lets you specify
+                        handlers for browser events. A handler accepts an
+                        <code>AlmEvent</code> and can do whatever it
+                        wants with it. Frequently the event will be used to
+                        dispatch a message.
+                    </p>
+                    <p class="explain">
+                        A <code>Component</code> has access to whatever
+                        properties it is given. The <code>connect</code>
+                        function gives a <code>Component</code> access to both
+                        the application's state as well as a
+                        <code>dispatch</code> function. <code>dispatch</code>
+                        delivers messages to the application to update the
+                        state.
+                    </p>
+                    <p class="explain">
+                        The <code>Message</code> type is defined like so:
+                        <pre>
+                        <code class="typescript">
+type Message&lt;T&gt; = { 'type': T;  data?: any; };
+                        </code>
+                        </pre>
+                        The <code>T</code> type parameter specifies the
+                        different actions a <code>Message</code> may
+                        represent. The optional <code>data</code> property
+                        allows arbitrary data to be sent with each message.
                     </p>
                 </div>
                 <div class="example">
@@ -131,7 +235,9 @@ const EventComponent = ({ inputText, count, overLimit, updateText }) =>
                 input: evt => updateText(evt.getValue())
             }
         }),
-        el('p', {}, [count.toString() + ' / 140 characters'])
+        el('p', {
+            'class': overLimit ? 'warning ' : ''
+        }, [count.toString() + ' / 140 characters'])
     ]);
 
 const EventView = connect(
@@ -145,8 +251,8 @@ const EventView = connect(
 )(EventComponent);
 
 const eventApp = new Alm({
-    initialState: { inputText: '', count: 0, overLimit: false },
-    reducer: eventReducer,
+    model: { inputText: '', count: 0, overLimit: false },
+    update: eventReducer,
     view: EventView(),
     eventRoot: 'event-app',
     domRoot: 'event-app'
@@ -156,67 +262,132 @@ eventApp.start();
                     </code></pre>
                 </div>
             </div><!-- row -->
-
             <div class="row">
                 <div class="explanation">
-                    <h2>A colorful port example</h2>
+                    <h2>Asynchronous Events!</h2>
                     <p class="explain">
-                        You can communicate outside your
-                        <span class="lit">App</span> using <em>port</em>
-                        signals. Ports are specified with the
-                        <span class="lit">ports</span> property. You can provide
-                        an array of names, or you can provide an object whose
-                        keys are themselves arrays of port names. Eg,
-                        <pre><code>
-ports: ['port1','port2']
+                        A <code>Component</code> is not the only place where
+                        your application can send messages. Frequently it is
+                        desirable for one event to trigger another. An Alm
+                        application accepts a second type of asynchronous
+                        message.
+
+                        <pre><code class="typescript">
+type AsyncMessage&lt;S, A&gt; =
+    (d: (a: Message&lt;A&gt;) => void, s: () => S)
+    => Message&lt;A&gt;;
                         </code></pre>
-                        or
-                        <pre><code>
-ports: {
-  outbound: ['out1'],
-  inbound: ['in1','in2']
-}
-                        </code></pre>
+
+                        An <code>AsyncMessage</code> is a function accepting a
+                        <code>dispatch</code> function and a function that
+                        produces the application state, and then yields a new
+                        <code>Message</code>.
                     </p>
                     <p class="explain">
-                        The ports created by your app are part of the object
-                        returned by <code>App#start</code>. As with other
-                        signals you can either <code>send</code> them values or
-                        <code>recv</code> values from them.
+                        In the example <code>requestPageAction</code> is such a
+                        message. It constructs an <code>XMLHttpRequest</code>,
+                        immediately returns a message stating that a request is
+                        in progress, and sets up another message to be fired
+                        when the data is loaded.
+                    </p>
+                    <p class="explain">
+                        The update function <code>asyncReducer</code> is very
+                        straightforward, as is the
+                        <code>AsyncComponent</code>. In a non-trivial
+                        application it can become cumbersome to keep track of
+                        state or follow the flow of data. A reactive application
+                        is an arrow from input events to an output view, which
+                        can generate new events in the process. It is
+                        immediately obvious where events come from and where
+                        they go.
                     </p>
                 </div>
                 <div class="example">
-                    <div id="color-app" class="app"></div>
+                    <div id="async-app" class="app"></div>
                     <pre><code class="typescript">
-const colorApp = new alm.App({
-    state: '#ffffff',
-    update: (value, color) => value,
-    ports: ['background'],
-    main: scope => {
-        scope.events.input
-            .filter(evt => evt.getId() === 'app2-color')
-            .recv(evt => scope.actions.send(evt.getValue()));
+enum AsyncActions {
+    RequestPage,
+    SetPageText,
+    SetPageUrl
+};
 
-        scope.events.click
-            .filter(evt => evt.getId() === 'app2-reset')
-            .recv(_ => scope.actions.send('#ffffff'));
-
-        scope.state.connect(scope.ports.background);
-    },
-    render: color =>
-        el('span', {}, [
-            el('input', { 'type':'color',
-                          'id':'app2-color',
-                          'value':color }),
-            el('button', { 'id':'app2-reset' }, ['Reset'])
-        ]),
-    eventRoot: 'color-app',
-    domRoot: 'color-app'
-}).start();
-
-colorApp.ports.background.recv(color => {
-    document.body.style.backgroundColor = color;
+const setPageUrlAction = data => ({
+    type: AsyncActions.SetPageUrl,
+    data
 });
+
+const setPageTextAction = data => ({
+    type: AsyncActions.SetPageText,
+    data
+});
+
+const requestPageAction = () => (dispatch, state) => {
+    const r = new XMLHttpRequest();
+    r.open("GET", state().pageUrl, true);
+    r.onreadystatechange = () => {
+        if (r.readyState !== 4 || r.status !== 200) {
+            return;
+        }
+        dispatch(setPageTextAction(r.responseText));
+    };
+    r.send();
+    return {
+        type: AsyncActions.RequestPage
+    };
+};
+
+const asyncReducer = (state, action) => {
+    switch (action.type) {
+        case AsyncActions.RequestPage:
+            return { ...state, requesting: true };
+        case AsyncActions.SetPageText:
+            return { ...state, requesting: false, pageText: action.data };
+        case AsyncActions.SetPageUrl:
+            return { ...state, pageUrl: action.data };
+        default:
+            return state;
+    }
+};
+
+const AsyncComponent = props =>
+    el('div', {}, [
+        el('h3', {}, ["Load web page"]),
+        el('input', {
+            type: 'text',
+            value: props.pageUrl,
+            on: {
+                input: evt => props.setPageUrl(evt.getValue())
+            }
+        }),
+        el('button', {
+            on: {
+                click: evt => props.requestPage()
+            }
+        }, ['Load Page']),
+        el('p', {}, [props.requesting
+            ? 'Loading ...'
+            : 'Number of characters received: ' + props.pageText.length
+        ])
+    ]);
+
+const AsyncView = connect(
+    state => state,
+    dispatch => ({
+        setPageUrl: url => dispatch(setPageUrlAction(url)),
+        requestPage: () => dispatch(requestPageAction()),
+        setPageText: text => dispatch(setPageTextAction(text))
+    })
+)(AsyncComponent);
+
+const asyncApp = new Alm({
+    model: { pageText: '', requesting: false, pageUrl: 'http://niltag.net' },
+    update: asyncReducer,
+    view: AsyncView(),
+    eventRoot: 'async-app',
+    domRoot: 'async-app'
+});
+
+asyncApp.start();
                     </code></pre>
                 </div>
             </div><!-- row -->
@@ -227,6 +398,6 @@ colorApp.ports.background.recv(color => {
             src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
         <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/typescript.min.js"></script>
         <script>hljs.initHighlightingOnLoad();</script>
-        <script src="js/main.js"></script>
+        <script src="js/main.min.js"></script>
     </body>
 </html>
