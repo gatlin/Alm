@@ -5,11 +5,228 @@
         <title>Alm</title>
         <link href="css/main.css" rel="stylesheet" media="all">
         <link rel="stylesheet"
-              href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.7.0/styles/default.min.css">
+              href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     <body>
-        <div id="app-root"></div>
+        <h1>Alm</h1>
+        <div id="column-container">
+            <div class="row">
+                <p class="lead">This is a website for
+                    <a href="https://github.com/gatlin/alm">Alm, a neat web
+                        application framework I made.</a> The README on GitHub
+                    has a lot of information. You can also see
+                    <a href="todo.html">a more involved, obligatory todo list
+                        app</a> as well as
+                    <a
+                        href="https://github.com/gatlin/Alm/blob/master/docs/js/src/todo.js">its    
+                        code</a>.</p>
+                <p class="lead">
+                    Alm's purpose is to help you <em>organize</em> your web
+                    application in a maintainable, modular, and type-safe
+                    way. It is heavily inspired by React and Elm.
+                </p>
+                <p class="lead">If you have any questions or comments or free
+                    money don't hesitate to reach me at
+                    <a href="mailto:gatlin@niltag.net">gatlin@niltag.net</a>.</p>
+            </div>
+            <div class="row">
+                <div class="explanation">
+                    <h2>Getting started: a simple counter.</h2>
+                    <p class="explain">Here is an explanation of how this shit goes.</p>
+                </div>
+                <div class="example" id="src-1">
+                    <div id="counter-app" class="app"></div>
+                    <pre>
+                        <code class="typescript">
+const CounterComponent = ({ counter, increment, decrement }) =>
+    el('div', {}, [
+        el('p', {}, [counter.toString()]),
+        el('div', {}, [
+            el('button', { on: { click: evt => increment() } },
+                ['Increment']),
+            el('button', { on: { click: evt => decrement() } },
+                ['Decrement'])
+        ])
+    ]);
+
+const CounterView = connect(
+    counter => ({ counter }),
+    dispatch => ({
+        increment: () => dispatch({ type: true }),
+        decrement: () => dispatch({ type: false })
+    })
+)(CounterComponent);
+
+const counterApp = new Alm({
+    initialState: 0,
+    reducer: (state, action) => action.type ? state + 1 : state - 1,
+    view: CounterView(),
+    domRoot: 'counter-app',
+    eventRoot: 'counter-app'
+});
+
+counterApp.start();
+                        </code>
+                    </pre>
+                </div>
+            </div><!-- row -->
+
+            <div class="row">
+                <div class="explanation">
+                    <h2>Events!</h2>
+                    <p class="explain">
+                        Events are communicated via <em>signals</em>.
+                    </p>
+                    <p class="explain">
+                        When you create your <code>App</code> a number of
+                        default event signals are created and given to you via
+                        the <em>scope</em> argument to your <code>main</code>
+                        function. When your app finally <code>start</code>s up
+                        only those events you actually subscribed to will actually be
+                        registered.
+                    </p>
+                    <p class="explain">
+                        The actual values emitted <em>wrap around</em> raw
+                        browser events and provide some simple convenience
+                        methods - <code>#getId</code>, <code>#getValue</code>,
+                        and <code>#hasClass</code>, all of which provide
+                        information about the event target. And the raw event is
+                        only a call to <code>#getRaw</code> away.
+                    </p>
+                </div>
+                <div class="example">
+                    <div id="event-app" class="app"></div>
+                    <pre><code class="typescript">
+type EventState = {
+    count: number;
+    overLimit: false;
+    inputText: string;
+};
+
+enum EventActions {
+    UpdateText
+};
+
+const eventReducer = (state, action) => {
+    switch (action.type) {
+        case EventActions.UpdateText: {
+            let inputText = action.data;
+            return {
+                inputText,
+                count: inputText.length,
+                overLimit: inputText.length > 140
+            };
+        }
+        default:
+            return state;
+    };
+};
+
+const EventComponent = ({ inputText, count, overLimit, updateText }) =>
+    el('div', {}, [
+        el('textarea', {
+            id: 'text-event',
+            on: {
+                input: evt => updateText(evt.getValue())
+            }
+        }),
+        el('p', {}, [count.toString() + ' / 140 characters'])
+    ]);
+
+const EventView = connect(
+    state => state,
+    dispatch => ({
+        updateText: data => dispatch({
+            type: EventActions.UpdateText,
+            data
+        })
+    })
+)(EventComponent);
+
+const eventApp = new Alm({
+    initialState: { inputText: '', count: 0, overLimit: false },
+    reducer: eventReducer,
+    view: EventView(),
+    eventRoot: 'event-app',
+    domRoot: 'event-app'
+});
+
+eventApp.start();
+                    </code></pre>
+                </div>
+            </div><!-- row -->
+
+            <div class="row">
+                <div class="explanation">
+                    <h2>A colorful port example</h2>
+                    <p class="explain">
+                        You can communicate outside your
+                        <span class="lit">App</span> using <em>port</em>
+                        signals. Ports are specified with the
+                        <span class="lit">ports</span> property. You can provide
+                        an array of names, or you can provide an object whose
+                        keys are themselves arrays of port names. Eg,
+                        <pre><code>
+ports: ['port1','port2']
+                        </code></pre>
+                        or
+                        <pre><code>
+ports: {
+  outbound: ['out1'],
+  inbound: ['in1','in2']
+}
+                        </code></pre>
+                    </p>
+                    <p class="explain">
+                        The ports created by your app are part of the object
+                        returned by <code>App#start</code>. As with other
+                        signals you can either <code>send</code> them values or
+                        <code>recv</code> values from them.
+                    </p>
+                </div>
+                <div class="example">
+                    <div id="color-app" class="app"></div>
+                    <pre><code class="typescript">
+const colorApp = new alm.App({
+    state: '#ffffff',
+    update: (value, color) => value,
+    ports: ['background'],
+    main: scope => {
+        scope.events.input
+            .filter(evt => evt.getId() === 'app2-color')
+            .recv(evt => scope.actions.send(evt.getValue()));
+
+        scope.events.click
+            .filter(evt => evt.getId() === 'app2-reset')
+            .recv(_ => scope.actions.send('#ffffff'));
+
+        scope.state.connect(scope.ports.background);
+    },
+    render: color =>
+        el('span', {}, [
+            el('input', { 'type':'color',
+                          'id':'app2-color',
+                          'value':color }),
+            el('button', { 'id':'app2-reset' }, ['Reset'])
+        ]),
+    eventRoot: 'color-app',
+    domRoot: 'color-app'
+}).start();
+
+colorApp.ports.background.recv(color => {
+    document.body.style.backgroundColor = color;
+});
+                    </code></pre>
+                </div>
+            </div><!-- row -->
+        </div>
+
+
+        <script
+            src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/typescript.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script>
         <script src="js/main.js"></script>
     </body>
 </html>
