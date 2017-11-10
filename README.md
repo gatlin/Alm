@@ -4,7 +4,7 @@ Alm
 A small reactive application library written in TypeScript. Heavily inspired by
 React, Redux, and Elm.
 
-(c) 2016 Gatlin Johnson <gatlin@niltag.net>
+(c) 2016, 2017 Gatlin Johnson <gatlin@niltag.net>
 
 Synopsis
 ---
