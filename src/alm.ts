@@ -202,6 +202,10 @@ export class AlmEvent {
         return this.value;
     }
 
+    public getRaw() {
+        return this.raw;
+    }
+
     public class_in_ancestry(klass: string) {
         let result = null;
         let done = false;
