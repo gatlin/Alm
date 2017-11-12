@@ -1,0 +1,228 @@
+html,body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 600px;
+    margin: 0 auto;
+    font: 14px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #4d4d4d;
+    background: #eaeaea;
+}
+
+@media (max-width: 320px) {
+    #main {
+        width: 100%;
+    }
+}
+
+@media (min-width: 700px) {
+    #app_container {
+        width: 600px;
+    }
+}
+
+#main {
+    width: 550px;
+    position: relative;
+    margin: 130px 0 40px 0;
+}
+
+#the_app {
+    padding-top: 15px;
+    background: #fff;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #ccc;
+    position: relative;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.2),
+    0 25px 50px 0 rgba(0, 0, 0, 0.15);
+}
+
+#the_app:before {
+    content: '';
+    border-left: 1px solid #f5d6d6;
+    border-right: 1px solid #f5d6d6;
+    width: 2px;
+    position: absolute;
+    top: 0;
+    left: 40px;
+    height: 100%;
+}
+
+/* Buttons and input */
+
+input#field, .edit {
+    position: relative;
+    margin: 0;
+    width: 100%;
+    font-size: 24px;
+    font-family: inherit;
+    line-height: 1.4em;
+    border: 0;
+    outline: none;
+    color: #4d4d4d;
+    padding: 6px;
+    border: 1px solid #999;
+    box-shadow: inset 0 -1px 5px 0 rgba(0, 0, 0, 0.2);
+    -moz-box-sizing: border-box;
+    -ms-box-sizing: border-box;
+    -o-box-sizing: border-box;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-font-smoothing: antialiased;
+    -ms-font-smoothing: antialiased;
+    -o-font-smoothing: antialiased;
+    font-smoothing: antialiased;
+}
+
+input#field {
+    padding: 16px 16px 16px 60px;
+    border: none;
+    background: rgba(0, 0, 0, 0.02);
+    z-index: 2;
+    box-shadow: none;
+}
+
+li.task input.toggle {
+    text-align: center;
+    width: 40px;
+    /* auto, since non-WebKit browsers doesn't support input styling */
+    height: auto;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin: auto 50px auto 0;
+    padding: 0;
+    /* Mobile Safari */
+    border: none;
+    -webkit-appearance: none;
+    -ms-appearance: none;
+    -o-appearance: none;
+    appearance: none;
+}
+
+
+button, input[type="checkbox"] {
+    outline: none;
+}
+
+button {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 100%;
+    vertical-align: baseline;
+    font-family: inherit;
+    color: inherit;
+    -webkit-appearance: none;
+    -ms-appearance: none;
+    -o-appearance: none;
+    appearance: none;
+}
+
+button.delete_button {
+    position: absolute;
+    display: none;
+    top: 0;
+    right: 15px;
+    bottom: 0;
+    width: 40px;
+    height: 40px;
+    margin: auto 0;
+    font-size: 22px;
+    color: #a88a8a;
+    -webkit-transition: all 0.2s;
+    transition: all 0.2s;
+}
+
+button.delete_button:after {
+    content: '✖';
+}
+
+button.delete_button:hover {
+    text-shadow: 0 0 1px #000,
+    0 0 10px rgba(199, 107, 107, 0.8);
+    -webkit-transform: scale(1.3);
+    -ms-transform: scale(1.3);
+    transform: scale(1.3);
+}
+
+/* Task list style */
+li.task:hover .delete_button {
+    display: block;
+}
+
+li.task {
+    position: relative;
+    font-size: 24px;
+    border-bottom: 1px dotted #ccc;
+    border-top: 1px dashed #c5c5c5;
+    padding: 10px 5px;
+    width: 100%;
+}
+
+li.task label {
+    white-space: pre;
+    word-break: break-word;
+    padding: 15px 60px 15px 15px;
+    margin-left: 45px;
+    display: block;
+    line-height: 1.2;
+    -webkit-transition: color 0.4s;
+    transition: color 0.4s;
+}
+
+li.task label.completed {
+    color: #a9a9a9;
+    font-style: italic;
+    text-decoration: line-through;
+}
+
+li.task .editing {
+    z-index: 2;
+    display: inline-block;
+    position: relative;
+    width: 400px;
+    padding: 13px 17px 12px 17px;
+    margin: 0 0 0 40px;
+    font-size: inherit;
+    font-family: inherit;
+    color: #4d4d4d;
+}
+
+#header {
+    text-align: center;
+}
+
+#header h1 {
+    color: #4d4d4d;
+    position:absolute;
+    top: -80px;
+    right: 0;
+    left: 0;
+    font-size: 30px;
+}
+
+#header::before {
+    content: '';
+    height: 15px;
+    position:absolute;
+    z-index: 2;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #8d7d77;
+    border-top-left-radius: 1px;
+    border-top-right-radius: 1px;
+    border-bottom: 1px solid #6c615c;
+}
+
+.todo_list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
