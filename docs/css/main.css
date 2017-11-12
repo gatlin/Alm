@@ -12,6 +12,10 @@ span.lit, code {
     font-size: 1.1em;
 }
 
+p {
+    font-family: serif;
+}
+
 @media only screen and (min-width: 960px) {
     html, body {
         margin: 0;
@@ -100,7 +104,7 @@ p.aesthetic {
     font-family: 'Arial', sans-serif;
 }
 
-p.explain, p.explain ul,  p.explain li {
+p.explain, p.explain ul,  p.explain li, p.lead {
     margin-right: 10px;
 }
 
