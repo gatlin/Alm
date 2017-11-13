@@ -73,6 +73,11 @@ export class VDom {
         }
     }
 
+    public setChildren(children: Array<VDom>): this {
+        this.children = children;
+        return this;
+    }
+
     /** Equality based on the key. */
     eq(other: VDom): boolean {
         if (!other) {

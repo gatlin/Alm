@@ -159,7 +159,7 @@ export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
                 tag: ctor,
                 attrs: props
             }, children, VDomType.Node, handler)
-            : ctor(props)(ctx);
+            : ctor({ ...props, children })(ctx).setChildren(children);
 
         return view;
     };
