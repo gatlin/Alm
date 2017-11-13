@@ -22,6 +22,5 @@ node_modules
 src/*.js
 ./.AppleDouble
 ./*/.AppleDouble
-dist/lib
-dist/task-umd.js
-example/dist
+_bundles
+lib
