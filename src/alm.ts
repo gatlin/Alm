@@ -174,14 +174,6 @@ export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
     };
 }
 
-export function jsx(jsxObject) {
-    return el(
-        jsxObject.elementName,
-        jsxObject.attributes,
-        jsxObject.children
-    );
-}
-
 /**
  * A Component is a pure function from an argument to a {@link View}.
  */
