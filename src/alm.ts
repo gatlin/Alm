@@ -175,6 +175,22 @@ export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
 }
 
 /**
+ * A constructor for use with JSX transpilers.
+ */
+export function jsx(jsxObject) {
+    let attrs = jsxObject['attributes'];
+    if ('className' in attrs) {
+        attrs['class'] = attrs['className'];
+        delete attrs['className'];
+    }
+    return el(
+        jsxObject.elementName,
+        attrs,
+        jsxObject.children
+    );
+};
+
+/**
  * A Component is a pure function from an argument to a {@link View}.
  */
 export type Component<Props> = (props: Props) => View<any, any>;
