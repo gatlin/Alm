@@ -299,27 +299,44 @@ function el(ctor, props, _children) {
     if (_children === void 0) { _children = []; }
     return function (ctx) {
         var eventHandlers = {};
+        props = props ? props : {};
         if (props.on) {
             eventHandlers = props.on;
             delete props.on;
         }
+        _children = Array.isArray(_children) && _children.length === 1
+            && Array.isArray(_children[0])
+            ? _children[0]
+            : _children;
         var children = _children
-            .map(function (child, idx) {
-            return typeof child === 'string'
-                ? new vdom_1.VDom(child, [], vdom_1.VDomType.Text)
-                : child(ctx);
-        });
+            ? _children
+                .map(function (child, idx) {
+                return typeof child === 'string'
+                    ? new vdom_1.VDom(child, [], vdom_1.VDomType.Text)
+                    : child(ctx);
+            })
+            : [];
         var handler = function (e) { return ctx.handle(e, eventHandlers); };
         var view = typeof ctor === 'string'
             ? new vdom_1.VDom({
                 tag: ctor,
                 attrs: props
             }, children, vdom_1.VDomType.Node, handler)
-            : ctor(props)(ctx);
+            : ctor(__assign({}, props, { children: children }))(ctx).setChildren(children);
         return view;
     };
 }
 exports.el = el;
+function jsx(jsxObject) {
+    var attrs = jsxObject['attributes'];
+    if ('className' in attrs) {
+        attrs['class'] = attrs['className'];
+        delete attrs['className'];
+    }
+    return el(jsxObject.elementName, attrs, jsxObject.children);
+}
+exports.jsx = jsx;
+;
 var AlmEvent = (function () {
     function AlmEvent(evt) {
         this.raw = evt;
@@ -338,6 +355,9 @@ var AlmEvent = (function () {
     };
     AlmEvent.prototype.getValue = function () {
         return this.value;
+    };
+    AlmEvent.prototype.getRaw = function () {
+        return this.raw;
     };
     AlmEvent.prototype.class_in_ancestry = function (klass) {
         var result = null;
@@ -492,6 +512,10 @@ var VDom = (function () {
             this.key = 'text-node';
         }
     }
+    VDom.prototype.setChildren = function (children) {
+        this.children = children;
+        return this;
+    };
     VDom.prototype.eq = function (other) {
         if (!other) {
             return false;
