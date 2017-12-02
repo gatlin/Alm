@@ -147,6 +147,11 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             delete props.on;
         }
 
+        if (props.className) {
+            props['class'] = props.className;
+            delete props['className'];
+        }
+
         const children: Array<View<S, A>> = _children
             ? _children
                 .map((child, idx) => {
