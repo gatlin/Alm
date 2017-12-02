@@ -23,4 +23,5 @@ src/*.js
 ./.AppleDouble
 ./*/.AppleDouble
 _bundles
-lib
+# I go back and forth on this one
+#lib
