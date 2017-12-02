@@ -137,7 +137,7 @@ export type View<S, A> = (c: Context<S, A>) => VDom;
  * @param _children - An array of child {@link View}s.
  * @return A new {@link View}.
  */
-export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
+export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
     //export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
     return ctx => {
         let eventHandlers = {};
@@ -147,12 +147,7 @@ export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
             delete props.on;
         }
 
-        _children = Array.isArray(_children) && _children.length === 1
-            && Array.isArray(_children[0])
-            ? _children[0]
-            : _children;
-
-        const children = _children
+        const children: Array<View<S, A>> = _children
             ? _children
                 .map((child, idx) => {
                     return typeof child === 'string'
@@ -173,22 +168,6 @@ export function el<S, A>(ctor, props: any = {}, _children = []): View<S, A> {
         return view;
     };
 }
-
-/**
- * A constructor for use with JSX transpilers.
- */
-export function jsx(jsxObject) {
-    let attrs = jsxObject['attributes'];
-    if ('className' in attrs) {
-        attrs['class'] = attrs['className'];
-        delete attrs['className'];
-    }
-    return el(
-        jsxObject.elementName,
-        attrs,
-        jsxObject.children
-    );
-};
 
 /**
  * A Component is a pure function from an argument to a {@link View}.
