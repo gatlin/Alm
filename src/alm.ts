@@ -158,8 +158,6 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             ? _children
                 .filter(child => typeof child !== 'undefined')
                 .map((child, idx) => {
-                    console.log('ctor', ctor);
-                    console.log('child', child);
                     return typeof child === 'string'
                         ? new VDom(child, [], VDomType.Text)
                         : child(ctx);
