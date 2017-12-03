@@ -15,7 +15,7 @@
         "compile": "npm run clean && tsc",
         "bundle": "NODE_ENV=production webpack",
         "docs": "cd docs && webpack",
-        "postinstall": "tsc"
+        "postinstall": "npm run bundle"
     },
     "devDependencies": {
         "@types/node": "^8.0.50",
