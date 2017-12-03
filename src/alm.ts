@@ -151,10 +151,15 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             props['class'] = props.className;
             delete props['className'];
         }
-
+        _children = Array.isArray(_children) && Array.isArray(_children[0])
+            ? _children[0]
+            : _children;
         const children: Array<View<S, A>> = _children
             ? _children
+                .filter(child => typeof child !== 'undefined')
                 .map((child, idx) => {
+                    console.log('ctor', ctor);
+                    console.log('child', child);
                     return typeof child === 'string'
                         ? new VDom(child, [], VDomType.Text)
                         : child(ctx);
