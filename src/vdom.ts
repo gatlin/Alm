@@ -96,7 +96,9 @@ function makeDOMNode(tree): any {
     const el = document.createElement(tree.content.tag);
 
     for (let key in tree.content.attrs) {
-        el.setAttribute(key, tree.content.attrs[key]);
+        if (tree.content.attrs[key] !== null) {
+            el.setAttribute(key, tree.content.attrs[key]);
+        }
     }
 
     for (let i = 0; i < tree.children.length; i++) {

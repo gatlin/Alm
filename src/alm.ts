@@ -138,10 +138,9 @@ export type View<S, A> = (c: Context<S, A>) => VDom;
  * @return A new {@link View}.
  */
 export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
-    //export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
     return ctx => {
         let eventHandlers = {};
-        props = props ? props : {};
+        props = props === null ? {} : props;
         if (props.on) {
             eventHandlers = props.on;
             delete props.on;
@@ -151,6 +150,7 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             props['class'] = props.className;
             delete props['className'];
         }
+
         _children = Array.isArray(_children) && Array.isArray(_children[0])
             ? _children[0]
             : _children;
