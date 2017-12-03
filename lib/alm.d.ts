@@ -20,8 +20,7 @@ export declare type Context<S, A> = {
     handle: (e: HTMLElement, h: Object) => void;
 };
 export declare type View<S, A> = (c: Context<S, A>) => VDom;
-export declare function el<S, A>(ctor: any, props?: any, _children?: any[]): View<S, A>;
-export declare function jsx(jsxObject: any): View<{}, {}>;
+export declare function el<S, A>(ctor: any, props?: any, ..._children: any[]): View<S, A>;
 export declare type Component<Props> = (props: Props) => View<any, any>;
 export declare class AlmEvent {
     private readonly raw;
