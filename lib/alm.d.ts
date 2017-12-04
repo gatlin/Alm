@@ -7,9 +7,9 @@ export declare type Reducer<S, A> = (state: S, action: Message<A>) => S;
 export declare function makeReducer(reducers: any): (state: any, action: any) => any;
 export declare type AsyncMessage<S, A> = (d: (a: Message<A>) => void, s: () => S) => Message<A>;
 export declare class Store<S, Action> {
-    private state;
+    protected state: S;
     private reducer;
-    private subscribers;
+    protected subscribers: Array<() => void>;
     constructor(state: S, reducer: Reducer<S, Action>);
     dispatch(action: Message<Action> | AsyncMessage<S, Action>): this;
     subscribe(subscriber: any): () => void;

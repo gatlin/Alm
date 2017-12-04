@@ -61,9 +61,9 @@ export type AsyncMessage<S, A> =
  */
 export class Store<S, Action> {
 
-    private subscribers: Array<() => void>;
+    protected subscribers: Array<() => void>;
 
-    constructor(private state: S, private reducer: Reducer<S, Action>) {
+    constructor(protected state: S, private reducer: Reducer<S, Action>) {
         this.subscribers = [];
     }
 
