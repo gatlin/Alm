@@ -87,11 +87,7 @@ var CounterActions;
 ;
 var CounterComponent = function (_a) {
     var counter = _a.counter, increment = _a.increment, decrement = _a.decrement;
-    return alm_1.el('div', {
-        'ref': function (e) {
-            console.log('e', e);
-        }
-    }, [
+    return alm_1.el('div', {}, [
         alm_1.el('p', {}, [counter.toString()]),
         alm_1.el('div', {}, [
             alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, ['Increment']),
