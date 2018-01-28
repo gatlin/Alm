@@ -416,6 +416,7 @@ var Alm = (function () {
             }
             if (handlers.ref) {
                 handlers.ref(e);
+                delete handlers['ref'];
             }
             for (var evtName in handlers) {
                 if (!(evtName in _this.events)) {

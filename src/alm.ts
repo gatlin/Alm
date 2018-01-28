@@ -306,6 +306,7 @@ export class Alm<State, Action> {
 
             if (handlers.ref) {
                 handlers.ref(e);
+                delete handlers['ref'];
             }
             for (let evtName in handlers) {
                 if (!(evtName in this.events)) {
