@@ -151,6 +151,11 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             delete props['className'];
         }
 
+        if (props.ref) {
+            eventHandlers['ref'] = props['ref'];
+            delete props['ref'];
+        }
+
         _children = Array.isArray(_children) && Array.isArray(_children[0])
             ? _children[0]
             : _children;
@@ -299,7 +304,10 @@ export class Alm<State, Action> {
                 e.setAttribute('data-alm-id', eId);
             }
             for (let evtName in handlers) {
-                if (!(evtName in this.events)) {
+                if (evtName === 'ref') {
+                    handlers.ref(e);
+                }
+                else if (!(evtName in this.events)) {
                     this.events[evtName] = {};
                     this.registerEvent(evtName, this.handleEvent);
                 }

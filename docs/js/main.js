@@ -294,22 +294,29 @@ var Store = (function () {
     return Store;
 }());
 exports.Store = Store;
-function el(ctor, props, _children) {
+function el(ctor, props) {
     if (props === void 0) { props = {}; }
-    if (_children === void 0) { _children = []; }
+    var _children = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        _children[_i - 2] = arguments[_i];
+    }
     return function (ctx) {
         var eventHandlers = {};
-        props = props ? props : {};
+        props = props === null ? {} : props;
         if (props.on) {
             eventHandlers = props.on;
             delete props.on;
         }
-        _children = Array.isArray(_children) && _children.length === 1
-            && Array.isArray(_children[0])
+        if (props.className) {
+            props['class'] = props.className;
+            delete props['className'];
+        }
+        _children = Array.isArray(_children) && Array.isArray(_children[0])
             ? _children[0]
             : _children;
         var children = _children
             ? _children
+                .filter(function (child) { return typeof child !== 'undefined'; })
                 .map(function (child, idx) {
                 return typeof child === 'string'
                     ? new vdom_1.VDom(child, [], vdom_1.VDomType.Text)
@@ -322,21 +329,11 @@ function el(ctor, props, _children) {
                 tag: ctor,
                 attrs: props
             }, children, vdom_1.VDomType.Node, handler)
-            : ctor(__assign({}, props, { children: children }))(ctx).setChildren(children);
+            : ctor(__assign({}, props, { children: children }))(ctx);
         return view;
     };
 }
 exports.el = el;
-function jsx(jsxObject) {
-    var attrs = jsxObject['attributes'];
-    if ('className' in attrs) {
-        attrs['class'] = attrs['className'];
-        delete attrs['className'];
-    }
-    return el(jsxObject.elementName, attrs, jsxObject.children);
-}
-exports.jsx = jsx;
-;
 var AlmEvent = (function () {
     function AlmEvent(evt) {
         this.raw = evt;
@@ -534,7 +531,9 @@ function makeDOMNode(tree) {
     }
     var el = document.createElement(tree.content.tag);
     for (var key in tree.content.attrs) {
-        el.setAttribute(key, tree.content.attrs[key]);
+        if (tree.content.attrs[key] !== null) {
+            el.setAttribute(key, tree.content.attrs[key]);
+        }
     }
     for (var i = 0; i < tree.children.length; i++) {
         var child = makeDOMNode(tree.children[i]);
