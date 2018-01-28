@@ -87,7 +87,11 @@ var CounterActions;
 ;
 var CounterComponent = function (_a) {
     var counter = _a.counter, increment = _a.increment, decrement = _a.decrement;
-    return alm_1.el('div', {}, [
+    return alm_1.el('div', {
+        'ref': function (e) {
+            console.log('e', e);
+        }
+    }, [
         alm_1.el('p', {}, [counter.toString()]),
         alm_1.el('div', {}, [
             alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, ['Increment']),
@@ -311,6 +315,10 @@ function el(ctor, props) {
             props['class'] = props.className;
             delete props['className'];
         }
+        if (props.ref) {
+            eventHandlers['ref'] = props['ref'];
+            delete props['ref'];
+        }
         _children = Array.isArray(_children) && Array.isArray(_children[0])
             ? _children[0]
             : _children;
@@ -409,6 +417,10 @@ var Alm = (function () {
             else {
                 eId = _this.gensym();
                 e.setAttribute('data-alm-id', eId);
+            }
+            if (handlers.ref) {
+                console.log('calling ref');
+                handlers.ref(e);
             }
             for (var evtName in handlers) {
                 if (!(evtName in _this.events)) {
