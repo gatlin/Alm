@@ -303,11 +303,12 @@ export class Alm<State, Action> {
                 eId = this.gensym();
                 e.setAttribute('data-alm-id', eId);
             }
+
+            if (handlers.ref) {
+                handlers.ref(e);
+            }
             for (let evtName in handlers) {
-                if (evtName === 'ref') {
-                    handlers.ref(e);
-                }
-                else if (!(evtName in this.events)) {
+                if (!(evtName in this.events)) {
                     this.events[evtName] = {};
                     this.registerEvent(evtName, this.handleEvent);
                 }
