@@ -305,8 +305,10 @@ export class Alm<State, Action> {
             }
 
             if (handlers.ref) {
-                handlers.ref(e);
-                delete handlers['ref'];
+                window.setTimeout(() => {
+                    handlers.ref(e);
+                    delete handlers['ref'];
+                }, 0);
             }
             for (let evtName in handlers) {
                 if (!(evtName in this.events)) {

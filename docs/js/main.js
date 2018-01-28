@@ -415,8 +415,10 @@ var Alm = (function () {
                 e.setAttribute('data-alm-id', eId);
             }
             if (handlers.ref) {
-                handlers.ref(e);
-                delete handlers['ref'];
+                window.setTimeout(function () {
+                    handlers.ref(e);
+                    delete handlers['ref'];
+                }, 0);
             }
             for (var evtName in handlers) {
                 if (!(evtName in _this.events)) {
