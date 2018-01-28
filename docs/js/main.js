@@ -415,7 +415,6 @@ var Alm = (function () {
                 e.setAttribute('data-alm-id', eId);
             }
             if (handlers.ref) {
-                console.log('calling ref');
                 handlers.ref(e);
             }
             for (var evtName in handlers) {
