@@ -305,7 +305,6 @@ export class Alm<State, Action> {
             }
 
             if (handlers.ref) {
-                console.log('calling ref');
                 handlers.ref(e);
             }
             for (let evtName in handlers) {
