@@ -172,10 +172,12 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             ? _children
                 .filter(child => typeof child !== 'undefined')
                 .map((child, idx) => {
+                    if (!child) { return null; }
                     return typeof child === 'string'
                         ? new VDom(child, [], VDomType.Text)
                         : child(ctx);
                 })
+                .filter(child => child !== null)
             : [];
 
         // This function will be called when/if the VDom is ever actually
