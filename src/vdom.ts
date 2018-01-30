@@ -243,6 +243,7 @@ export function diff_dom(parent, a, b, index = 0) {
 
                 // contend with attributes. only necessary changes.
                 let dom = parent.childNodes[index];
+
                 for (let attr in a.content.attrs) {
                     if (!(attr in b.content.attrs)) {
                         dom.removeAttribute(attr);
@@ -257,6 +258,10 @@ export function diff_dom(parent, a, b, index = 0) {
                         dom[attr] = v;
                         dom.setAttribute(attr, v);
                     }
+                }
+
+                if (dom.hasAttribute('value')) {
+                    dom.value = dom.getAttribute('value');
                 }
 
                 // contend with the children.

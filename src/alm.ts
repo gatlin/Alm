@@ -139,26 +139,35 @@ export type View<S, A> = (c: Context<S, A>) => VDom;
  */
 export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
     return ctx => {
-        let eventHandlers = {};
         props = props === null ? {} : props;
+
+        // Grab the event handlers
+        let eventHandlers = {};
         if (props.on) {
             eventHandlers = props.on;
             delete props.on;
         }
 
+        // Since `class` is a reserved identifier in ECMAScript we call it
+        // `className` in the JSX code.
         if (props.className) {
             props['class'] = props.className;
             delete props['className'];
         }
 
+        // A ref is a callback which is given the real actual DOM node once it
+        // has rendered.
         if (props.ref) {
             eventHandlers['ref'] = props['ref'];
             delete props['ref'];
         }
 
+        // TODO why is this check necessary?
         _children = Array.isArray(_children) && Array.isArray(_children[0])
             ? _children[0]
             : _children;
+
+        // Construct the children recursively.
         const children: Array<View<S, A>> = _children
             ? _children
                 .filter(child => typeof child !== 'undefined')
@@ -169,8 +178,14 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
                 })
             : [];
 
-        const handler = e => ctx.handle(e, eventHandlers);
+        // This function will be called when/if the VDom is ever actually
+        // rendered into a real DOM node and will be used to set the appropriate
+        // event handlers.
+        const handler = e => { ctx.handle(e, eventHandlers); };
 
+        // If the constructor is a string it refers to an HTML element name and
+        // so we can create a VDom node for it. Otherwise it must be a component
+        // function which will, ultimately, return a VDom.
         const view = typeof ctor === 'string'
             ? new VDom({
                 tag: ctor,
@@ -296,33 +311,33 @@ export class Alm<State, Action> {
         this.events = {};
         let store = this.store;
         let handle = (e, handlers) => {
-            let eId;
-            if (e.hasAttribute('data-alm-id')) {
-                eId = e.getAttribute('data-alm-id');
-            } else {
-                eId = this.gensym();
-                e.setAttribute('data-alm-id', eId);
-            }
+            window.setTimeout(() => {
+                let eId;
+                if (e.hasAttribute('data-alm-id')) {
+                    eId = e.getAttribute('data-alm-id');
+                } else {
+                    eId = this.gensym();
+                    e.setAttribute('data-alm-id', eId);
+                }
 
-            if (handlers.ref) {
-                window.setTimeout(() => {
+                if (handlers.ref) {
                     handlers.ref(e);
                     delete handlers['ref'];
-                }, 0);
-            }
-            for (let evtName in handlers) {
-                if (!(evtName in this.events)) {
-                    this.events[evtName] = {};
-                    this.registerEvent(evtName, this.handleEvent);
                 }
-                this.events[evtName][eId] = handlers[evtName];
-            }
-
-            return () => {
                 for (let evtName in handlers) {
-                    delete this.events[evtName][eId];
+                    if (!(evtName in this.events)) {
+                        this.events[evtName] = {};
+                        this.registerEvent(evtName, this.handleEvent);
+                    }
+                    this.events[evtName][eId] = handlers[evtName];
                 }
-            };
+
+                return () => {
+                    for (let evtName in handlers) {
+                        delete this.events[evtName][eId];
+                    }
+                };
+            }, 0);
         };
         let context = { store, handle };
         let vtree = this.view(context);
