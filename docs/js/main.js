@@ -301,8 +301,8 @@ function el(ctor, props) {
         _children[_i - 2] = arguments[_i];
     }
     return function (ctx) {
-        var eventHandlers = {};
         props = props === null ? {} : props;
+        var eventHandlers = {};
         if (props.on) {
             eventHandlers = props.on;
             delete props.on;
@@ -327,7 +327,7 @@ function el(ctor, props) {
                     : child(ctx);
             })
             : [];
-        var handler = function (e) { return ctx.handle(e, eventHandlers); };
+        var handler = function (e) { ctx.handle(e, eventHandlers); };
         var view = typeof ctor === 'string'
             ? new vdom_1.VDom({
                 tag: ctor,
@@ -406,32 +406,32 @@ var Alm = (function () {
         this.events = {};
         var store = this.store;
         var handle = function (e, handlers) {
-            var eId;
-            if (e.hasAttribute('data-alm-id')) {
-                eId = e.getAttribute('data-alm-id');
-            }
-            else {
-                eId = _this.gensym();
-                e.setAttribute('data-alm-id', eId);
-            }
-            if (handlers.ref) {
-                window.setTimeout(function () {
+            window.setTimeout(function () {
+                var eId;
+                if (e.hasAttribute('data-alm-id')) {
+                    eId = e.getAttribute('data-alm-id');
+                }
+                else {
+                    eId = _this.gensym();
+                    e.setAttribute('data-alm-id', eId);
+                }
+                if (handlers.ref) {
                     handlers.ref(e);
                     delete handlers['ref'];
-                }, 0);
-            }
-            for (var evtName in handlers) {
-                if (!(evtName in _this.events)) {
-                    _this.events[evtName] = {};
-                    _this.registerEvent(evtName, _this.handleEvent);
                 }
-                _this.events[evtName][eId] = handlers[evtName];
-            }
-            return function () {
                 for (var evtName in handlers) {
-                    delete _this.events[evtName][eId];
+                    if (!(evtName in _this.events)) {
+                        _this.events[evtName] = {};
+                        _this.registerEvent(evtName, _this.handleEvent);
+                    }
+                    _this.events[evtName][eId] = handlers[evtName];
                 }
-            };
+                return function () {
+                    for (var evtName in handlers) {
+                        delete _this.events[evtName][eId];
+                    }
+                };
+            }, 0);
         };
         var context = { store: store, handle: handle };
         var vtree = this.view(context);
@@ -647,6 +647,9 @@ function diff_dom(parent, a, b, index) {
                         dom[attr] = v;
                         dom.setAttribute(attr, v);
                     }
+                }
+                if (dom.hasAttribute('value')) {
+                    dom.value = dom.getAttribute('value');
                 }
                 var moves = diff_array(a.children, b.children, function (a, b) {
                     if (typeof a === 'undefined')
