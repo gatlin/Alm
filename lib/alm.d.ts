@@ -21,7 +21,7 @@ export declare type Context<S, A> = {
 };
 export declare type View<S, A> = (c: Context<S, A>) => VDom;
 export declare function el<S, A>(ctor: any, props?: any, ..._children: any[]): View<S, A>;
-export declare type Component<Props> = (props: Props) => View<any, any>;
+export declare type Component<Props, S, A> = (props: Props) => View<S, A>;
 export declare class AlmEvent {
     private readonly raw;
     private readonly classes;

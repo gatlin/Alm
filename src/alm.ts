@@ -202,7 +202,7 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
 /**
  * A Component is a pure function from an argument to a {@link View}.
  */
-export type Component<Props> = (props: Props) => View<any, any>;
+export type Component<Props, S, A> = (props: Props) => View<S, A>;
 
 /**
  * Wraps around browser events.
