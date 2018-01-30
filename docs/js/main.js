@@ -633,24 +633,26 @@ function diff_dom(parent, a, b, index) {
     if (b.treeType === VDomType.Node) {
         if (a.treeType === VDomType.Node) {
             if (a.content.tag === b.content.tag) {
-                var dom = parent.childNodes[index];
+                var dom_1 = parent.childNodes[index];
                 for (var attr in a.content.attrs) {
                     if (!(attr in b.content.attrs)) {
-                        dom.removeAttribute(attr);
-                        delete dom[attr];
+                        dom_1.removeAttribute(attr);
+                        delete dom_1[attr];
                     }
                 }
                 for (var attr in b.content.attrs) {
                     var v = b.content.attrs[attr];
                     if (!(attr in a.content.attrs) ||
                         v !== a.content.attrs[attr]) {
-                        dom[attr] = v;
-                        dom.setAttribute(attr, v);
+                        dom_1[attr] = v;
+                        dom_1.setAttribute(attr, v);
                     }
                 }
-                if (dom.hasAttribute('value')) {
-                    dom.value = dom.getAttribute('value');
-                }
+                window.setTimeout(function () {
+                    if (dom_1.hasAttribute('value')) {
+                        dom_1.value = dom_1.getAttribute('value');
+                    }
+                }, 0);
                 var moves = diff_array(a.children, b.children, function (a, b) {
                     if (typeof a === 'undefined')
                         return false;

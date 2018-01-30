@@ -260,9 +260,11 @@ export function diff_dom(parent, a, b, index = 0) {
                     }
                 }
 
-                if (dom.hasAttribute('value')) {
-                    dom.value = dom.getAttribute('value');
-                }
+                window.setTimeout(() => {
+                    if (dom.hasAttribute('value')) {
+                        dom.value = dom.getAttribute('value');
+                    }
+                }, 0);
 
                 // contend with the children.
                 const moves = diff_array(
