@@ -17,11 +17,12 @@ enum CounterActions {
 const CounterComponent = ({ counter, increment, decrement }) =>
     el('div', {},
         el('p', {}, counter.toString()),
-        el('div', {},
+        el('div', {}, [
             el('button', { on: { click: evt => increment() } },
                 'Increment'),
             el('button', { on: { click: evt => decrement() } },
                 'Decrement')
+        ]
         )
     );
 

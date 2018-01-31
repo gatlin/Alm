@@ -128,6 +128,10 @@ export interface Context<S, A> {
  */
 export type View<S, A> = (c: Context<S, A>) => VDom;
 
+function flatten<T>(ary: Array<Array<T>>): Array<T> {
+    return ary.reduce((a, b) => [...a, ...b], []);
+}
+
 /**
  * Convenience function for constructing a {@link View}.
  *
@@ -164,14 +168,20 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
 
         // Construct the children recursively.
         const children: Array<View<S, A>> = _children
-            ? _children
+            ? flatten(_children
                 .filter(child => typeof child !== 'undefined')
                 .map((child, idx) => {
                     if (!child) { return null; }
-                    return typeof child === 'string'
-                        ? new VDom(child, [], VDomType.Text)
-                        : child(ctx);
-                })
+                    if (typeof child === 'string') {
+                        return [new VDom(child, [], VDomType.Text)];
+                    }
+                    else if (typeof child === 'function') {
+                        return [child(ctx)];
+                    }
+                    else if (child instanceof Array) {
+                        return child.map(c => el(ctor, props, c)(ctx));
+                    }
+                }))
                 .filter(child => child !== null)
             : [];
 

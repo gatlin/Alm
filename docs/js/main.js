@@ -87,7 +87,10 @@ var CounterActions;
 ;
 var CounterComponent = function (_a) {
     var counter = _a.counter, increment = _a.increment, decrement = _a.decrement;
-    return alm_1.el('div', {}, alm_1.el('p', {}, counter.toString()), alm_1.el('div', {}, alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, 'Increment'), alm_1.el('button', { on: { click: function (evt) { return decrement(); } } }, 'Decrement')));
+    return alm_1.el('div', {}, alm_1.el('p', {}, counter.toString()), alm_1.el('div', {}, [
+        alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, 'Increment'),
+        alm_1.el('button', { on: { click: function (evt) { return decrement(); } } }, 'Decrement')
+    ]));
 };
 var CounterView = alm_1.connect(function (counter) { return ({ counter: counter }); }, function (dispatch) { return ({
     increment: function () { return dispatch({ type: CounterActions.Increment }); },
@@ -280,6 +283,9 @@ var Store = (function () {
 }());
 exports.Store = Store;
 ;
+function flatten(ary) {
+    return ary.reduce(function (a, b) { return a.concat(b); }, []);
+}
 function el(ctor, props) {
     if (props === void 0) { props = {}; }
     var _children = [];
@@ -302,16 +308,22 @@ function el(ctor, props) {
             delete props['ref'];
         }
         var children = _children
-            ? _children
+            ? flatten(_children
                 .filter(function (child) { return typeof child !== 'undefined'; })
                 .map(function (child, idx) {
                 if (!child) {
                     return null;
                 }
-                return typeof child === 'string'
-                    ? new vdom_1.VDom(child, [], vdom_1.VDomType.Text)
-                    : child(ctx);
-            })
+                if (typeof child === 'string') {
+                    return [new vdom_1.VDom(child, [], vdom_1.VDomType.Text)];
+                }
+                else if (typeof child === 'function') {
+                    return [child(ctx)];
+                }
+                else if (child instanceof Array) {
+                    return child.map(function (c) { return el(ctor, props, c)(ctx); });
+                }
+            }))
                 .filter(function (child) { return child !== null; })
             : [];
         var handler = function (e) { ctx.handle(e, eventHandlers); };
