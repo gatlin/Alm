@@ -321,6 +321,7 @@ export class Alm<State, Action> {
                     handlers.ref(e);
                     delete handlers['ref'];
                 }
+
                 for (let evtName in handlers) {
                     if (!(evtName in this.events)) {
                         this.events[evtName] = {};
@@ -336,7 +337,7 @@ export class Alm<State, Action> {
                 };
             }, 0);
         };
-        let context = { store, handle };
+        let context: Context<State, Action> = { store, handle };
         let vtree = this.view(context);
         initialDOM(this.domRoot, vtree);
 
@@ -347,7 +348,7 @@ export class Alm<State, Action> {
         });
     }
 
-    private handleEvent(evt) {
+    private handleEvent = evt => {
         const evtName = evt.type;
         if (this.events[evtName]) {
             if (evt.target.hasAttribute('data-alm-id')) {
@@ -357,7 +358,7 @@ export class Alm<State, Action> {
                 }
             }
         }
-    }
+    };
 
     private gensym() {
         return 'node-' + (this.gensymnumber++).toString();
@@ -367,7 +368,7 @@ export class Alm<State, Action> {
      * Register an event listener for the specified event.
      */
     private registerEvent(evtName, cb) {
-        this.eventRoot.addEventListener(evtName, cb.bind(this), true);
+        this.eventRoot.addEventListener(evtName, cb, true);
     }
 }
 

@@ -15,10 +15,10 @@ export declare class Store<S, Action> {
     subscribe(subscriber: any): () => void;
     getState(): S;
 }
-export declare type Context<S, A> = {
+export interface Context<S, A> {
     store: Store<S, A>;
     handle: (e: HTMLElement, h: Object) => void;
-};
+}
 export declare type View<S, A> = (c: Context<S, A>) => VDom;
 export declare function el<S, A>(ctor: any, props?: any, ..._children: any[]): View<S, A>;
 export declare type Component<Props, S, A> = (props: Props) => View<S, A>;
@@ -51,7 +51,7 @@ export declare class Alm<State, Action> {
     private gensymnumber;
     constructor(cfg: AppConfig<State, Action>);
     start(): void;
-    private handleEvent(evt);
+    private handleEvent;
     private gensym();
     private registerEvent(evtName, cb);
 }

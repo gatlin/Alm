@@ -21,6 +21,11 @@ export declare class VDom {
     eq(other: VDom): boolean;
 }
 export declare function initialDOM(domRoot: any, tree: any): void;
+export declare enum Op {
+    Merge = 0,
+    Delete = 1,
+    Insert = 2,
+}
 export declare type Eq<T> = (a: T, b: T) => boolean;
 export declare function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>): any[];
 export declare function diff_dom(parent: any, a: any, b: any, index?: number): void;

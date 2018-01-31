@@ -375,7 +375,19 @@ var AlmEvent = (function () {
 exports.AlmEvent = AlmEvent;
 var Alm = (function () {
     function Alm(cfg) {
+        var _this = this;
         this.gensymnumber = 0;
+        this.handleEvent = function (evt) {
+            var evtName = evt.type;
+            if (_this.events[evtName]) {
+                if (evt.target.hasAttribute('data-alm-id')) {
+                    var almId = evt.target.getAttribute('data-alm-id');
+                    if (_this.events[evtName][almId]) {
+                        _this.events[evtName][almId](new AlmEvent(evt));
+                    }
+                }
+            }
+        };
         this.store = new Store(cfg.model, cfg.update);
         this.eventRoot = typeof cfg.eventRoot === 'string'
             ? document.getElementById(cfg.eventRoot)
@@ -429,22 +441,11 @@ var Alm = (function () {
             vtree = updated;
         });
     };
-    Alm.prototype.handleEvent = function (evt) {
-        var evtName = evt.type;
-        if (this.events[evtName]) {
-            if (evt.target.hasAttribute('data-alm-id')) {
-                var almId = evt.target.getAttribute('data-alm-id');
-                if (this.events[evtName][almId]) {
-                    this.events[evtName][almId](new AlmEvent(evt));
-                }
-            }
-        }
-    };
     Alm.prototype.gensym = function () {
         return 'node-' + (this.gensymnumber++).toString();
     };
     Alm.prototype.registerEvent = function (evtName, cb) {
-        this.eventRoot.addEventListener(evtName, cb.bind(this), true);
+        this.eventRoot.addEventListener(evtName, cb, true);
     };
     return Alm;
 }());
@@ -553,7 +554,7 @@ var Op;
     Op[Op["Merge"] = 0] = "Merge";
     Op[Op["Delete"] = 1] = "Delete";
     Op[Op["Insert"] = 2] = "Insert";
-})(Op || (Op = {}));
+})(Op = exports.Op || (exports.Op = {}));
 ;
 function diff_array(a, b, eq) {
     if (!a.length) {
@@ -578,13 +579,13 @@ function diff_array(a, b, eq) {
                 d[i_2 * n + j_2] = d[(i_2 - 1) * n + (j_2 - 1)];
             }
             else {
-                d[i_2 * n + j_2] = Math.min(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)])
-                    + 1;
+                d[i_2 * n + j_2] = Math.min(d[(i_2 - 1) * n + j_2], d[i_2 * n + (j_2 - 1)]) + 1;
             }
         }
     }
-    var i = m - 1, j = n - 1;
-    while (!(i === 0 && j === 0)) {
+    var i = m - 1;
+    var j = n - 1;
+    while (i > 0 && j > 0) {
         if (eq(a[i - 1], b[j - 1])) {
             i--;
             j--;
@@ -599,6 +600,16 @@ function diff_array(a, b, eq) {
                 i--;
                 moves.unshift([Op.Delete, a[i], null]);
             }
+        }
+    }
+    if (i > 0 && j === 0) {
+        for (; i >= 0; i--) {
+            moves.unshift([Op.Delete, a[i], null]);
+        }
+    }
+    if (j > 0 && i === 0) {
+        for (; j >= 0; j--) {
+            moves.unshift([Op.Insert, null, b[j]]);
         }
     }
     return moves;

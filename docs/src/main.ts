@@ -2,7 +2,9 @@ import {
     el,
     connect,
     makeReducer,
-    Alm
+    Alm,
+    View,
+    Store
 } from '../../src/alm';
 
 // COUNTER example
