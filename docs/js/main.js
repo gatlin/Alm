@@ -87,10 +87,11 @@ var CounterActions;
 ;
 var CounterComponent = function (_a) {
     var counter = _a.counter, increment = _a.increment, decrement = _a.decrement;
-    return alm_1.el('div', {}, alm_1.el('p', {}, counter.toString()), alm_1.el('div', {}, [
-        alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, 'Increment'),
-        alm_1.el('button', { on: { click: function (evt) { return decrement(); } } }, 'Decrement')
-    ]));
+    return (alm_1.el("div", null,
+        alm_1.el("p", null, counter.toString()),
+        alm_1.el("div", null,
+            alm_1.el("button", { on: { click: function (evt) { return increment(); } } }, "Increment"),
+            alm_1.el("button", { on: { click: function (evt) { return decrement(); } } }, "Decrement"))));
 };
 var CounterView = alm_1.connect(function (counter) { return ({ counter: counter }); }, function (dispatch) { return ({
     increment: function () { return dispatch({ type: CounterActions.Increment }); },
@@ -307,23 +308,20 @@ function el(ctor, props) {
             eventHandlers['ref'] = props['ref'];
             delete props['ref'];
         }
+        _children = Array.isArray(_children) && Array.isArray(_children[0])
+            ? _children[0]
+            : _children;
         var children = _children
-            ? flatten(_children
+            ? _children
                 .filter(function (child) { return typeof child !== 'undefined'; })
                 .map(function (child, idx) {
-                if (!child) {
+                if (!child || child instanceof Array) {
                     return null;
                 }
-                if (typeof child === 'string') {
-                    return [new vdom_1.VDom(child, [], vdom_1.VDomType.Text)];
-                }
-                else if (typeof child === 'function') {
-                    return [child(ctx)];
-                }
-                else if (child instanceof Array) {
-                    return child.map(function (c) { return el(ctor, props, c)(ctx); });
-                }
-            }))
+                return typeof child === 'string'
+                    ? new vdom_1.VDom(child, [], vdom_1.VDomType.Text)
+                    : child(ctx);
+            })
                 .filter(function (child) { return child !== null; })
             : [];
         var handler = function (e) { ctx.handle(e, eventHandlers); };
@@ -333,6 +331,7 @@ function el(ctor, props) {
                 attrs: props
             }, children, vdom_1.VDomType.Node, handler)
             : ctor(__assign({}, props, { children: children }))(ctx);
+        console.log('view', view);
         return view;
     };
 }
@@ -630,10 +629,12 @@ exports.diff_array = diff_array;
 function diff_dom(parent, a, b, index) {
     if (index === void 0) { index = 0; }
     if (typeof b === 'undefined' || b === null) {
-        if (parent.childNodes[index].onDestroy) {
-            parent.childNodes[index].onDestroy();
+        if (parent.childNodes[index]) {
+            if (parent.childNodes[index].onDestroy) {
+                parent.childNodes[index].onDestroy();
+            }
+            parent.removeChild(parent.childNodes[index]);
         }
-        parent.removeChild(parent.childNodes[index]);
         return;
     }
     if (typeof a === 'undefined' || a === null) {

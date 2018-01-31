@@ -165,23 +165,20 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             eventHandlers['ref'] = props['ref'];
             delete props['ref'];
         }
-
-        // Construct the children recursively.
+        _children = Array.isArray(_children) && Array.isArray(_children[0])
+            ? _children[0]
+            : _children;
         const children: Array<View<S, A>> = _children
-            ? flatten(_children
+            ? _children
                 .filter(child => typeof child !== 'undefined')
                 .map((child, idx) => {
-                    if (!child) { return null; }
-                    if (typeof child === 'string') {
-                        return [new VDom(child, [], VDomType.Text)];
+                    if (!child || child instanceof Array) {
+                        return null;
                     }
-                    else if (typeof child === 'function') {
-                        return [child(ctx)];
-                    }
-                    else if (child instanceof Array) {
-                        return child.map(c => el(ctor, props, c)(ctx));
-                    }
-                }))
+                    return typeof child === 'string'
+                        ? new VDom(child, [], VDomType.Text)
+                        : child(ctx);
+                })
                 .filter(child => child !== null)
             : [];
 
@@ -199,6 +196,8 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
                 attrs: props
             }, children, VDomType.Node, handler)
             : ctor({ ...props, children })(ctx);
+
+        console.log('view', view);
 
         return view;
     };

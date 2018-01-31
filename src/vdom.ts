@@ -234,10 +234,12 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
 export function diff_dom(parent, a, b, index = 0) {
 
     if (typeof b === 'undefined' || b === null) {
-        if (parent.childNodes[index].onDestroy) {
-            parent.childNodes[index].onDestroy();
+        if (parent.childNodes[index]) {
+            if (parent.childNodes[index].onDestroy) {
+                parent.childNodes[index].onDestroy();
+            }
+            parent.removeChild(parent.childNodes[index]);
         }
-        parent.removeChild(parent.childNodes[index]);
         return;
     }
 
