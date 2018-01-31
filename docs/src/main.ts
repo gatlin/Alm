@@ -13,15 +13,15 @@ enum CounterActions {
 };
 
 const CounterComponent = ({ counter, increment, decrement }) =>
-    el('div', {}, [
-        el('p', {}, [counter.toString()]),
-        el('div', {}, [
+    el('div', {},
+        el('p', {}, counter.toString()),
+        el('div', {},
             el('button', { on: { click: evt => increment() } },
-                ['Increment']),
+                'Increment'),
             el('button', { on: { click: evt => decrement() } },
-                ['Decrement'])
-        ])
-    ]);
+                'Decrement')
+        )
+    );
 
 const CounterView = connect(
     counter => ({ counter }),
@@ -71,7 +71,7 @@ const eventReducer = (state, action) => {
 };
 
 const EventComponent = ({ inputText, count, overLimit, updateText }) =>
-    el('div', {}, [
+    el('div', {},
         el('textarea', {
             id: 'text-event',
             on: {
@@ -80,8 +80,8 @@ const EventComponent = ({ inputText, count, overLimit, updateText }) =>
         }),
         el('p', {
             'class': overLimit ? 'warning ' : ''
-        }, [count.toString() + ' / 140 characters'])
-    ]);
+        }, count.toString() + ' / 140 characters')
+    );
 
 const EventView = connect(
     state => state,
@@ -155,8 +155,8 @@ const asyncReducer = (state, action) => {
 };
 
 const AsyncComponent = props =>
-    el('div', {}, [
-        el('h3', {}, ["Load web page"]),
+    el('div', {},
+        el('h3', {}, "Load web page"),
         el('input', {
             type: 'text',
             value: props.pageUrl,
@@ -168,12 +168,12 @@ const AsyncComponent = props =>
             on: {
                 click: evt => props.requestPage()
             }
-        }, ['Load Page']),
-        el('p', {}, [props.requesting
+        }, 'Load Page'),
+        el('p', {}, props.requesting
             ? 'Loading ...'
             : 'Number of characters received: ' + props.pageText.length
-        ])
-    ]);
+        )
+    );
 
 const AsyncView = connect(
     state => state,

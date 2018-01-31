@@ -117,7 +117,7 @@ export class Store<S, Action> {
  * A Context contains a pointer to the application {@link Store} as well as a
  * function which can be used to register event handlers.
  */
-export type Context<S, A> = {
+export interface Context<S, A> {
     store: Store<S, A>;
     handle: (e: HTMLElement, h: Object) => void;
 };
@@ -161,11 +161,6 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             eventHandlers['ref'] = props['ref'];
             delete props['ref'];
         }
-
-        // TODO why is this check necessary?
-        _children = Array.isArray(_children) && Array.isArray(_children[0])
-            ? _children[0]
-            : _children;
 
         // Construct the children recursively.
         const children: Array<View<S, A>> = _children

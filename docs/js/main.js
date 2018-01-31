@@ -87,13 +87,7 @@ var CounterActions;
 ;
 var CounterComponent = function (_a) {
     var counter = _a.counter, increment = _a.increment, decrement = _a.decrement;
-    return alm_1.el('div', {}, [
-        alm_1.el('p', {}, [counter.toString()]),
-        alm_1.el('div', {}, [
-            alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, ['Increment']),
-            alm_1.el('button', { on: { click: function (evt) { return decrement(); } } }, ['Decrement'])
-        ])
-    ]);
+    return alm_1.el('div', {}, alm_1.el('p', {}, counter.toString()), alm_1.el('div', {}, alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, 'Increment'), alm_1.el('button', { on: { click: function (evt) { return decrement(); } } }, 'Decrement')));
 };
 var CounterView = alm_1.connect(function (counter) { return ({ counter: counter }); }, function (dispatch) { return ({
     increment: function () { return dispatch({ type: CounterActions.Increment }); },
@@ -131,17 +125,14 @@ var eventReducer = function (state, action) {
 };
 var EventComponent = function (_a) {
     var inputText = _a.inputText, count = _a.count, overLimit = _a.overLimit, updateText = _a.updateText;
-    return alm_1.el('div', {}, [
-        alm_1.el('textarea', {
-            id: 'text-event',
-            on: {
-                input: function (evt) { return updateText(evt.getValue()); }
-            }
-        }),
-        alm_1.el('p', {
-            'class': overLimit ? 'warning ' : ''
-        }, [count.toString() + ' / 140 characters'])
-    ]);
+    return alm_1.el('div', {}, alm_1.el('textarea', {
+        id: 'text-event',
+        on: {
+            input: function (evt) { return updateText(evt.getValue()); }
+        }
+    }), alm_1.el('p', {
+        'class': overLimit ? 'warning ' : ''
+    }, count.toString() + ' / 140 characters'));
 };
 var EventView = alm_1.connect(function (state) { return state; }, function (dispatch) { return ({
     updateText: function (data) { return dispatch({
@@ -199,25 +190,19 @@ var asyncReducer = function (state, action) {
     }
 };
 var AsyncComponent = function (props) {
-    return alm_1.el('div', {}, [
-        alm_1.el('h3', {}, ["Load web page"]),
-        alm_1.el('input', {
-            type: 'text',
-            value: props.pageUrl,
-            on: {
-                input: function (evt) { return props.setPageUrl(evt.getValue()); }
-            }
-        }),
-        alm_1.el('button', {
-            on: {
-                click: function (evt) { return props.requestPage(); }
-            }
-        }, ['Load Page']),
-        alm_1.el('p', {}, [props.requesting
-                ? 'Loading ...'
-                : 'Number of characters received: ' + props.pageText.length
-        ])
-    ]);
+    return alm_1.el('div', {}, alm_1.el('h3', {}, "Load web page"), alm_1.el('input', {
+        type: 'text',
+        value: props.pageUrl,
+        on: {
+            input: function (evt) { return props.setPageUrl(evt.getValue()); }
+        }
+    }), alm_1.el('button', {
+        on: {
+            click: function (evt) { return props.requestPage(); }
+        }
+    }, 'Load Page'), alm_1.el('p', {}, props.requesting
+        ? 'Loading ...'
+        : 'Number of characters received: ' + props.pageText.length));
 };
 var AsyncView = alm_1.connect(function (state) { return state; }, function (dispatch) { return ({
     setPageUrl: function (url) { return dispatch(setPageUrlAction(url)); },
@@ -294,6 +279,7 @@ var Store = (function () {
     return Store;
 }());
 exports.Store = Store;
+;
 function el(ctor, props) {
     if (props === void 0) { props = {}; }
     var _children = [];
@@ -315,9 +301,6 @@ function el(ctor, props) {
             eventHandlers['ref'] = props['ref'];
             delete props['ref'];
         }
-        _children = Array.isArray(_children) && Array.isArray(_children[0])
-            ? _children[0]
-            : _children;
         var children = _children
             ? _children
                 .filter(function (child) { return typeof child !== 'undefined'; })
