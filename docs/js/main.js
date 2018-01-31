@@ -87,11 +87,7 @@ var CounterActions;
 ;
 var CounterComponent = function (_a) {
     var counter = _a.counter, increment = _a.increment, decrement = _a.decrement;
-    return (alm_1.el("div", null,
-        alm_1.el("p", null, counter.toString()),
-        alm_1.el("div", null,
-            alm_1.el("button", { on: { click: function (evt) { return increment(); } } }, "Increment"),
-            alm_1.el("button", { on: { click: function (evt) { return decrement(); } } }, "Decrement"))));
+    return alm_1.el('div', {}, alm_1.el('p', {}, counter.toString()), alm_1.el('div', {}, alm_1.el('button', { on: { click: function (evt) { return increment(); } } }, 'Increment'), alm_1.el('button', { on: { click: function (evt) { return decrement(); } } }, 'Decrement')));
 };
 var CounterView = alm_1.connect(function (counter) { return ({ counter: counter }); }, function (dispatch) { return ({
     increment: function () { return dispatch({ type: CounterActions.Increment }); },
