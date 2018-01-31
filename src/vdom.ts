@@ -11,7 +11,6 @@
  * phases, this algorithm computes patches and then applies them immediately.
  */
 
-
 export type Attrs = {
     [key: string]: string;
 };
@@ -124,7 +123,7 @@ export function initialDOM(domRoot, tree) {
 /**
  * A simple enum representing three kinds of array edit operations.
  */
-enum Op {
+export enum Op {
     Merge,
     Delete,
     Insert
@@ -165,6 +164,7 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
     for (let j = 0; j < n; j++) {
         d[j] = j;
     }
+
     for (let j = 1; j < n; j++) {
         for (let i = 1; i < m; i++) {
             if (eq(a[i - 1], b[j - 1])) {
@@ -173,14 +173,15 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
             else {
                 d[i * n + j] = Math.min(
                     d[(i - 1) * n + j],
-                    d[i * n + (j - 1)])
-                    + 1;
+                    d[i * n + (j - 1)]
+                ) + 1;
             }
         }
     }
 
-    let i = m - 1, j = n - 1;
-    while (!(i === 0 && j === 0)) {
+    let i = m - 1;
+    let j = n - 1;
+    while (i > 0 && j > 0) {
         if (eq(a[i - 1], b[j - 1])) {
             i--;
             j--;
@@ -198,6 +199,16 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
         }
     }
 
+    if (i > 0 && j === 0) {
+        for (; i >= 0; i--) {
+            moves.unshift([Op.Delete, a[i], null]);
+        }
+    }
+    if (j > 0 && i === 0) {
+        for (; j >= 0; j--) {
+            moves.unshift([Op.Insert, null, b[j]]);
+        }
+    }
     return moves;
 }
 
