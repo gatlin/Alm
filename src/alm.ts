@@ -197,8 +197,6 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             }, children, VDomType.Node, handler)
             : ctor({ ...props, children })(ctx);
 
-        console.log('view', view);
-
         return view;
     };
 }
