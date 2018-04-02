@@ -3,8 +3,8 @@ var webpack = require('webpack');
 
 var config = {
     entry: {
-        'main': './src/main.ts',
-        'main.min': './src/main.ts'
+        'main': './src/main.tsx',
+        'main.min': './src/main.tsx'
     },
 
     output: {
@@ -13,7 +13,7 @@ var config = {
     },
 
     resolve: {
-        extensions: ['.ts', '.js' ]
+        extensions: ['.ts', '.tsx', '.js' ]
     },
 
     plugins: [

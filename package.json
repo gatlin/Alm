@@ -28,6 +28,7 @@
         "webpack": "^3.8.1"
     },
     "dependencies": {
-        "awesome-typescript-loader": "^3.3.0"
+        "awesome-typescript-loader": "^3.3.0",
+        "whatwg-fetch": "^2.0.4"
     }
 }

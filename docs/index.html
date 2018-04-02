@@ -3,9 +3,9 @@
     <head>
         <meta charset='utf-8'>
         <title>Alm</title>
+        <link href="css/prism.css" rel="stylesheet" media="all">
         <link href="css/main.css" rel="stylesheet" media="all">
-        <link rel="stylesheet"
-              href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css">
+   
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     <body>
@@ -55,7 +55,7 @@
                     </p>
                     <p class="explain">
                         The <strong>update</strong> function is straightforward:
-                        <pre><code class="typescript">
+                        <pre><code class="language-jsx">
 (state, action) =>
     action.type === CounterActions.Increment
         ? state + 1
@@ -101,37 +101,48 @@
                 <div class="example" id="src-1">
                     <div id="counter-app" class="app"></div>
                     <pre>
-                        <code class="typescript">
+                        <code class="language-jsx">
 enum CounterActions {
     Increment,
     Decrement
 };
 
-const CounterComponent = ({ counter, increment, decrement }) =>
-    el('div', {}, [
-        el('p', {}, [counter.toString()]),
-        el('div', {}, [
-            el('button', { on: { click: evt => increment() } },
-                ['Increment']),
-            el('button', { on: { click: evt => decrement() } },
-                ['Decrement'])
-        ])
-    ]);
-
-const CounterView = connect(
+const CounterComponent = connect(
     counter => ({ counter }),
     dispatch => ({
-        increment: () => dispatch({ type: CounterActions.Increment }),
-        decrement: () => dispatch({ type: CounterActions.Decrement })
+        increment: () => dispatch({
+            type: CounterActions.Increment
+        }),
+        decrement: () => dispatch({
+            type: CounterActions.Decrement
+        })
     })
-)(CounterComponent);
+)(({ counter, increment, decrement }) => (
+&lt;div&gt;
+    &lt;p&gt;{ counter.toString() }&lt;/p&gt;
+    &lt;div&gt;
+        &lt;button
+            on={{
+               click: evt =&gt; increment()
+               }}&gt;
+            Increment
+        &lt;/button&gt;
+        &lt;button
+            on={{
+               click: evt =&gt; decrement()
+               }}&gt;
+            Decrement
+        &lt;/button&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+));
 
 const counterApp = new Alm({
     model: 0,
     update: (state, action) => action.type === CounterActions.Increment
         ? state + 1
         : state - 1,
-    view: CounterView(),
+    view: CounterComponent(),
     domRoot: 'counter-app',
     eventRoot: 'counter-app'
 });
@@ -207,13 +218,7 @@ type Message&lt;T&gt; = { 'type': T;  data?: any; };
                 </div>
                 <div class="example">
                     <div id="event-app" class="app"></div>
-                    <pre><code class="typescript">
-type EventState = {
-    count: number;
-    overLimit: false;
-    inputText: string;
-};
-
+                    <pre><code class="language-jsx">
 enum EventActions {
     UpdateText
 };
@@ -233,20 +238,7 @@ const eventReducer = (state, action) => {
     };
 };
 
-const EventComponent = ({ inputText, count, overLimit, updateText }) =>
-    el('div', {}, [
-        el('textarea', {
-            id: 'text-event',
-            on: {
-                input: evt => updateText(evt.getValue())
-            }
-        }),
-        el('p', {
-            'class': overLimit ? 'warning ' : ''
-        }, [count.toString() + ' / 140 characters'])
-    ]);
-
-const EventView = connect(
+const EventComponent = connect(
     state => state,
     dispatch => ({
         updateText: data => dispatch({
@@ -254,12 +246,23 @@ const EventView = connect(
             data
         })
     })
-)(EventComponent);
+)(({ inputText, count, overLimit, updateText }) => (
+    &lt;div&gt;
+        &lt;textarea
+            id="text-event"
+            on={{
+                input: evt =&gt; updateText(evt.getValue())
+            }}/&gt;
+        &lt;p className={ overLimit ? 'warning ' : '' }&gt;
+            { count.toString() + ' / 140 characters' }
+        &lt;/p&gt;
+    &lt;/div&gt;
+));
 
 const eventApp = new Alm({
     model: { inputText: '', count: 0, overLimit: false },
     update: eventReducer,
-    view: EventView(),
+    view: EventComponent(),
     eventRoot: 'event-app',
     domRoot: 'event-app'
 });
@@ -310,37 +313,22 @@ type AsyncMessage&lt;S, A&gt; =
                 </div>
                 <div class="example">
                     <div id="async-app" class="app"></div>
-                    <pre><code class="typescript">
+                    <pre><code class="language-jsx">
 enum AsyncActions {
     RequestPage,
     SetPageText,
     SetPageUrl
 };
 
-const setPageUrlAction = data => ({
-    type: AsyncActions.SetPageUrl,
-    data
-});
-
-const setPageTextAction = data => ({
-    type: AsyncActions.SetPageText,
-    data
-});
-
-const requestPageAction = () => (dispatch, state) => {
-    const r = new XMLHttpRequest();
-    r.open("GET", state().pageUrl, true);
-    r.onreadystatechange = () => {
-        if (r.readyState !== 4 || r.status !== 200) {
-            return;
-        }
-        dispatch(setPageTextAction(r.responseText));
-    };
-    r.send();
-    return {
-        type: AsyncActions.RequestPage
-    };
-};
+const requestPageAction = () => (dispatch, state) => (
+    fetch(state().pageUrl)
+        .then(response => response.text())
+        .then(data => dispatch({
+            type: AsyncActions.SetPageText,
+            data
+        }))
+        .catch(err => { console.error(err) })
+);
 
 const asyncReducer = (state, action) => {
     switch (action.type) {
@@ -355,40 +343,39 @@ const asyncReducer = (state, action) => {
     }
 };
 
-const AsyncComponent = props =>
-    el('div', {}, [
-        el('h3', {}, ["Load web page"]),
-        el('input', {
-            type: 'text',
-            value: props.pageUrl,
-            on: {
-                input: evt => props.setPageUrl(evt.getValue())
-            }
-        }),
-        el('button', {
-            on: {
-                click: evt => props.requestPage()
-            }
-        }, ['Load Page']),
-        el('p', {}, [props.requesting
-            ? 'Loading ...'
-            : 'Number of characters received: ' + props.pageText.length
-        ])
-    ]);
-
-const AsyncView = connect(
+const AsyncComponent = connect(
     state => state,
     dispatch => ({
-        setPageUrl: url => dispatch(setPageUrlAction(url)),
-        requestPage: () => dispatch(requestPageAction()),
-        setPageText: text => dispatch(setPageTextAction(text))
+        setPageUrl: url => dispatch({
+            type: AsyncActions.SetPageUrl,
+            data: url
+        }),
+        requestPage: () => dispatch(requestPageAction())
     })
-)(AsyncComponent);
+)(props => (
+    &lt;div&gt;
+        &lt;h3&gt;Load web page&lt;/h3&gt;
+        &lt;input
+            type="text"
+            value={ props.pageUrl }
+            on={{
+                  change: evt =&gt; props.setPageUrl(evt.getValue())
+            }}
+        /&gt;
+        &lt;button on={{ click: evt =&gt; props.requestPage()}}&gt;
+            Load Page
+        &lt;/button&gt;
+        &lt;p&gt;{ props.requesting
+            ? 'Loading ...'
+            : 'Number of characters received: ' + props.pageText.length
+            }&lt;/p&gt;
+    &lt;/div&gt;
+));
 
 const asyncApp = new Alm({
     model: { pageText: '', requesting: false, pageUrl: 'http://niltag.net' },
     update: asyncReducer,
-    view: AsyncView(),
+    view: AsyncComponent(),
     eventRoot: 'async-app',
     domRoot: 'async-app'
 });
@@ -399,11 +386,7 @@ asyncApp.start();
             </div><!-- row -->
         </div>
 
-
-        <script
-            src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/typescript.min.js"></script>
-        <script>hljs.initHighlightingOnLoad();</script>
+        <script src="js/prism.js"></script>
         <script src="js/main.min.js"></script>
     </body>
 </html>

@@ -16,6 +16,10 @@ p {
     font-family: serif;
 }
 
+pre code {
+    font-size: 0.9em;
+}
+
 @media only screen and (min-width: 960px) {
     html, body {
         margin: 0;

@@ -7,6 +7,8 @@ import {
     Store
 } from '../../src/alm';
 
+import 'whatwg-fetch';
+
 // COUNTER example
 
 enum CounterActions {
@@ -14,31 +16,38 @@ enum CounterActions {
     Decrement
 };
 
-const CounterComponent = ({ counter, increment, decrement }) =>
-    el('div', {},
-        el('p', {}, counter.toString()),
-        el('div', {},
-            el('button', { on: { click: evt => increment() } },
-                'Increment'),
-            el('button', { on: { click: evt => decrement() } },
-                'Decrement')
-        )
-    );
-
-const CounterView = connect(
+const CounterComponent = connect(
     counter => ({ counter }),
     dispatch => ({
         increment: () => dispatch({ type: CounterActions.Increment }),
         decrement: () => dispatch({ type: CounterActions.Decrement })
     })
-)(CounterComponent);
+)(({ counter, increment, decrement }) => (
+    <div>
+        <p>{ counter.toString() }</p>
+        <div>
+            <button
+                on={{
+                    click: evt => increment()
+                }}>
+                Increment
+            </button>
+            <button
+                on={{
+                    click: evt => decrement()
+                }}>
+                Decrement
+            </button>
+        </div>
+    </div>
+));
 
 const counterApp = new Alm({
     model: 0,
     update: (state, action) => action.type === CounterActions.Increment
         ? state + 1
         : state - 1,
-    view: CounterView(),
+    view: CounterComponent(),
     domRoot: 'counter-app',
     eventRoot: 'counter-app'
 });
@@ -72,20 +81,7 @@ const eventReducer = (state, action) => {
     };
 };
 
-const EventComponent = ({ inputText, count, overLimit, updateText }) =>
-    el('div', {},
-        el('textarea', {
-            id: 'text-event',
-            on: {
-                input: evt => updateText(evt.getValue())
-            }
-        }),
-        el('p', {
-            'class': overLimit ? 'warning ' : ''
-        }, count.toString() + ' / 140 characters')
-    );
-
-const EventView = connect(
+const EventComponent = connect(
     state => state,
     dispatch => ({
         updateText: data => dispatch({
@@ -93,12 +89,23 @@ const EventView = connect(
             data
         })
     })
-)(EventComponent);
+)(({ inputText, count, overLimit, updateText }) => (
+    <div>
+        <textarea
+            id="text-event"
+            on={{
+                input: evt => updateText(evt.getValue())
+            }}/>
+        <p className={ overLimit ? 'warning ' : '' }>
+            { count.toString() + ' / 140 characters' }
+        </p>
+    </div>
+));
 
 const eventApp = new Alm({
     model: { inputText: 'Type here!', count: 0, overLimit: false },
     update: eventReducer,
-    view: EventView(),
+    view: EventComponent(),
     eventRoot: 'event-app',
     domRoot: 'event-app'
 });
@@ -118,30 +125,15 @@ enum AsyncActions {
     SetPageUrl
 };
 
-const setPageUrlAction = data => ({
-    type: AsyncActions.SetPageUrl,
-    data
-});
-
-const setPageTextAction = data => ({
-    type: AsyncActions.SetPageText,
-    data
-});
-
-const requestPageAction = () => (dispatch, state) => {
-    const r = new XMLHttpRequest();
-    r.open("GET", state().pageUrl, true);
-    r.onreadystatechange = () => {
-        if (r.readyState !== 4 || r.status !== 200) {
-            return;
-        }
-        dispatch(setPageTextAction(r.responseText));
-    };
-    r.send();
-    return {
-        type: AsyncActions.RequestPage
-    };
-};
+const requestPageAction = () => (dispatch, state) => (
+    fetch(state().pageUrl)
+        .then(response => response.text())
+        .then(data => dispatch({
+            type: AsyncActions.SetPageText,
+            data
+        }))
+        .catch(err => { console.error(err) })
+);
 
 const asyncReducer = (state, action) => {
     switch (action.type) {
@@ -156,40 +148,39 @@ const asyncReducer = (state, action) => {
     }
 };
 
-const AsyncComponent = props =>
-    el('div', {},
-        el('h3', {}, "Load web page"),
-        el('input', {
-            type: 'text',
-            value: props.pageUrl,
-            on: {
-                input: evt => props.setPageUrl(evt.getValue())
-            }
-        }),
-        el('button', {
-            on: {
-                click: evt => props.requestPage()
-            }
-        }, 'Load Page'),
-        el('p', {}, props.requesting
-            ? 'Loading ...'
-            : 'Number of characters received: ' + props.pageText.length
-        )
-    );
-
-const AsyncView = connect(
+const AsyncComponent = connect(
     state => state,
     dispatch => ({
-        setPageUrl: url => dispatch(setPageUrlAction(url)),
-        requestPage: () => dispatch(requestPageAction()),
-        setPageText: text => dispatch(setPageTextAction(text))
+        setPageUrl: url => dispatch({
+            type: AsyncActions.SetPageUrl,
+            data: url
+        }),
+        requestPage: () => dispatch(requestPageAction())
     })
-)(AsyncComponent);
+)(props => (
+    <div>
+        <h3>Load web page</h3>
+        <input
+            type="text"
+            value={ props.pageUrl }
+            on={{
+                change: evt => props.setPageUrl(evt.getValue())
+            }}
+        />
+        <button on={{ click: evt => props.requestPage()}}>
+            Load Page
+        </button>
+        <p>{ props.requesting
+            ? 'Loading ...'
+            : 'Number of characters received: ' + props.pageText.length
+        }</p>
+    </div>
+));
 
 const asyncApp = new Alm({
     model: { pageText: '', requesting: false, pageUrl: 'http://niltag.net' },
     update: asyncReducer,
-    view: AsyncView(),
+    view: AsyncComponent(),
     eventRoot: 'async-app',
     domRoot: 'async-app'
 });
