@@ -5,7 +5,6 @@
         <title>Alm</title>
         <link href="css/prism.css" rel="stylesheet" media="all">
         <link href="css/main.css" rel="stylesheet" media="all">
-   
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
     <body>
@@ -170,8 +169,18 @@ counterApp.start();
                         result is declarative, straightforward code.
                     </p>
                     <p class="explain">
-                        The <code>el</code> function produces a virtual DOM and
-                        accepts three arguments:
+                        JSX can be used to create virtual DOM components (as can
+                        be seen in the examples). The
+                        <a
+                            href="https://github.com/gatlin/alm-template/tree/master/src">
+                            todo list example code
+                        </a>
+                        demonstrates how to set up webpack for JSX support.
+                    </p>
+                    <p class="explain">
+                        JSX support is simply a wrapper around a core function
+                        you may use directly. The <code>el</code> function
+                        produces a virtual DOM and accepts three arguments:
                         <ol>
                             <li>
                                 A string consisting of the XML element, or a
@@ -206,7 +215,7 @@ counterApp.start();
                     <p class="explain">
                         The <code>Message</code> type is defined like so:
                         <pre>
-                        <code class="typescript">
+                        <code class="language-jsx">
 type Message&lt;T&gt; = { 'type': T;  data?: any; };
                         </code>
                         </pre>
