@@ -181,6 +181,7 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
 
     let i = m - 1;
     let j = n - 1;
+
     while (i > 0 && j > 0) {
         if (eq(a[i - 1], b[j - 1])) {
             i--;
@@ -188,7 +189,7 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
             moves.unshift([Op.Merge, a[i], b[j]]);
         }
         else {
-            if (d[i * n + (j - 1)] <= d[(i - 1) * n + j]) {
+            if (d[i * n + (j - 1)] < d[(i - 1) * n + j]) {
                 j--;
                 moves.unshift([Op.Insert, null, b[j]]);
             }
@@ -199,16 +200,18 @@ export function diff_array<T>(a: Array<T>, b: Array<T>, eq: Eq<any>) {
         }
     }
 
-    if (i > 0 && j === 0) {
-        for (; i >= 0; i--) {
-            moves.unshift([Op.Delete, a[i], null]);
+    if (i > 0) {
+        while (i > 0) {
+            moves.unshift([Op.Delete, a[i--], null]);
         }
     }
+
     if (j > 0 && i === 0) {
-        for (; j >= 0; j--) {
-            moves.unshift([Op.Insert, null, b[j]]);
+        while (j > 0) {
+            moves.unshift([Op.Insert, null, b[--j]]);
         }
     }
+
     return moves;
 }
 
