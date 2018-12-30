@@ -83,16 +83,22 @@ export class Store<S, Action> {
      * @return The store.
      */
     public dispatch(action: Message<Action> | AsyncMessage<S, Action>): this {
-        this.state = this.reducer(
-            this.state,
-            typeof action === 'function'
-                ? action(
-                    this.dispatch.bind(this),
-                    this.getState.bind(this),
-                    this.extra
-                )
-                : action
-        );
+        if (typeof action === 'function') {
+            // Asynchronous action. Just run it. New messages will be dispatched
+            // using the first argument.
+            action(
+                this.dispatch.bind(this),
+                this.getState.bind(this),
+                this.extra
+            );
+        }
+        else {
+            // Synchronous message. Pass to the reducer.
+            this.state = this.reducer(
+                this.state,
+                action
+            );
+        }
         this.subscribers.forEach(update => { update(); });
         return this;
     }
