@@ -52,20 +52,27 @@ export function makeReducer(reducers) {
  * {@link Store#dispatch} function along with a thunk returning the application
  * state and return a {@link Message}. This allows an action to dispatch other
  * actions.
+ * The third argument is either `null` or an object of other (read-only) values
+ * you might want to access during asynchronous actions.
  */
-export type AsyncMessage<S, A> =
-    (d: (a: Message<A>) => void, s: () => S) => Message<A>;
+export type AsyncMessage<S, A> = (
+    d: (a: Message<A>) => void,      // Store#dispatch
+    s: () => S,                      // Store#getState
+    e: object | null                 // Miscellaneous data
+) => Message<A>;
 
 /**
  * Manages application state using an initial state value and a {@link Reducer}.
  */
 export class Store<S, Action> {
 
-    protected subscribers: Array<() => void>;
+    protected subscribers: Array<() => void> = [];
 
-    constructor(protected state: S, private reducer: Reducer<S, Action>) {
-        this.subscribers = [];
-    }
+    constructor(
+        protected state: S,
+        private reducer: Reducer<S, Action>,
+        protected extra: object | null = null
+    ) { }
 
     /**
      * Dispatch a {@link Message} to the {@link Reducer}.
@@ -79,7 +86,11 @@ export class Store<S, Action> {
         this.state = this.reducer(
             this.state,
             typeof action === 'function'
-                ? action(this.dispatch.bind(this), this.getState.bind(this))
+                ? action(
+                    this.dispatch.bind(this),
+                    this.getState.bind(this),
+                    this.extra
+                )
                 : action
         );
         this.subscribers.forEach(update => { update(); });
@@ -292,6 +303,7 @@ export type AppConfig<State, Action> = {
     view: View<State, Action>,
     eventRoot?: HTMLElement | Document | string;
     domRoot?: HTMLElement | string;
+    extra?: object;
 };
 
 /**
@@ -307,7 +319,8 @@ export class Alm<State, Action> {
     private gensymnumber: number = 0;
 
     constructor(cfg: AppConfig<State, Action>) {
-        this.store = new Store(cfg.model, cfg.update);
+        const extra = cfg.extra ? cfg.extra : null;
+        this.store = new Store(cfg.model, cfg.update, extra);
 
         this.eventRoot = typeof cfg.eventRoot === 'string'
             ? document.getElementById(cfg.eventRoot)
