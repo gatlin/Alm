@@ -159,6 +159,11 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
             delete props['className'];
         }
 
+        if (props['forId']) {
+            props['for'] = props['forId'];
+            delete props['forId'];
+        }
+
         // A ref is a callback which is given the real actual DOM node once it
         // has rendered.
         if (props.ref) {
@@ -175,12 +180,19 @@ export function el<S, A>(ctor, props: any = {}, ..._children): View<S, A> {
                     if (!child || child instanceof Array) {
                         return null;
                     }
-                    return typeof child === 'string'
-                        ? new VDom(child, [], VDomType.Text)
-                        : child(ctx);
+                    if (typeof child === 'string') {
+                        return new VDom(child, [], VDomType.Text);
+                    }
+                    if (typeof child === 'function') {
+                        return child(ctx);
+                    }
+                    return child;
                 })
                 .filter(child => child !== null)
             : [];
+
+        // Give a component access to its children via props
+        //props['children'] = children;
 
         // This function will be called when/if the VDom is ever actually
         // rendered into a real DOM node and will be used to set the appropriate
