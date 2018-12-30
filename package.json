@@ -1,6 +1,6 @@
 {
     "name": "alm",
-    "version": "1.0.9",
+    "version": "1.10.0",
     "main": "lib/alm.js",
     "typings": "lib/alm.d.ts",
     "description": "A Little Module for Application Lifecycle Management",
