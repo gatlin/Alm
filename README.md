@@ -36,4 +36,4 @@ Questions / Comments / Bugs / Oaths of fealty
 
 You can use the GitHub Issues feature or contact me at <gatlin@niltag.net>.
 
-[almsite]: http://niltag.net/Alm
+[almsite]: git@github.com:gatlin/Alm.git
